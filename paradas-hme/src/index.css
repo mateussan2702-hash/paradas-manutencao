@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #F97316;
+  --color-brand-dark: #ea6c0a;
+  --color-header: #1e293b;
+  --color-header-light: #334155;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #f1f5f9; }
+button { cursor: pointer; }
+input, select, textarea { font-family: inherit; }
