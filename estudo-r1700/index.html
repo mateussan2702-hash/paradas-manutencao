@@ -1,0 +1,1022 @@
+<title>R1700 Explodida</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: bancada de oficina subterrânea — visualizador 3D à esquerda, ficha técnica do sistema à direita (empilha no celular) */
+:root{
+  --bg:#0d1012; --panel:#14181b; --raise:#1b2024; --line:#2a3136; --fg:#e9e6de; --muted:#98a1a6;
+  --accent:#f0b323; --accent-ink:#1b1504; --hot:#ff7b39; --cool:#4db6dc; --ok:#86c78f;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.55}
+.app{height:100%;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:16px;
+  padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.viewer{position:relative;min-width:0;min-height:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 35%,var(--raise),var(--bg) 75%)}
+.viewer canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.viewer canvas.pointing{cursor:pointer}
+.panel{min-width:0;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px 22px 28px}
+
+/* HUD sobre o 3D */
+.hud{position:absolute;display:flex;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none}
+.hud>*{pointer-events:auto}
+.crumb{top:12px;left:12px;right:12px}
+.crumb .path{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:.03em;text-transform:uppercase;
+  background:color-mix(in srgb,var(--bg) 78%,transparent);padding:4px 10px;border-radius:6px;border:1px solid var(--line)}
+.crumb .path b{color:var(--accent);font-weight:700}
+.controls{left:12px;right:12px;bottom:12px}
+.live{top:56px;left:12px;max-width:min(560px,calc(100% - 24px));font-family:var(--mono);font-size:12px}
+.live:empty{display:none}
+.live .box{background:color-mix(in srgb,var(--bg) 82%,transparent);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.btn{font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.05em;text-transform:uppercase;color:var(--fg);
+  background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer;line-height:1.2}
+.btn:hover{border-color:var(--muted)}
+.btn:focus-visible,.tab:focus-visible,.sysbtn:focus-visible,.partbtn:focus-visible,.opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.slider{display:flex;align-items:center;gap:8px;background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:4px 10px;
+  font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.05em;text-transform:uppercase}
+.slider input{accent-color:var(--accent);width:130px}
+.hint{font-size:12px;color:var(--muted);margin-left:auto;background:color-mix(in srgb,var(--bg) 70%,transparent);padding:3px 8px;border-radius:4px}
+.tip{position:absolute;pointer-events:none;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.03em;
+  background:var(--accent);color:var(--accent-ink);padding:2px 8px;border-radius:4px;transform:translate(12px,-130%);white-space:nowrap}
+.strokes{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;margin-top:6px}
+.strokes div{border:1px solid var(--line);border-radius:4px;padding:3px 4px;text-align:center;font-size:11px;line-height:1.3}
+.strokes .s-pow{background:color-mix(in srgb,var(--hot) 35%,transparent);border-color:var(--hot)}
+.strokes .s-exh{background:color-mix(in srgb,var(--muted) 18%,transparent)}
+.strokes .s-int{background:color-mix(in srgb,var(--cool) 25%,transparent);border-color:var(--cool)}
+.strokes .s-cmp{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.k{color:var(--accent)}
+
+/* Painel */
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--display);font-weight:700;font-size:34px;line-height:1.05;margin:4px 0 10px;text-wrap:balance;letter-spacing:.01em}
+h2{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:.04em;text-transform:uppercase;margin:22px 0 8px}
+h3{font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:.03em;margin:0 0 4px}
+p{margin:0 0 10px;max-width:65ch}
+.lede{color:var(--fg);font-size:15px}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+.stack{display:flex;flex-direction:column;gap:8px}
+.specs{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:6px 0 4px}
+.specs dt{color:var(--muted)}
+.specs dd{margin:0;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.sysbtn{display:grid;grid-template-columns:28px 1fr;gap:2px 10px;text-align:left;width:100%;background:var(--raise);border:1px solid var(--line);
+  border-radius:8px;padding:10px 12px;color:var(--fg);cursor:pointer;font:inherit}
+.sysbtn:hover{border-color:var(--accent)}
+.sysbtn .n{grid-row:span 2;font-family:var(--mono);color:var(--accent);font-size:12px;padding-top:3px}
+.sysbtn .t{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:.02em}
+.sysbtn .d{color:var(--muted);font-size:12.5px}
+.back{margin-bottom:14px}
+.note{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin-top:14px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin:16px 0 14px}
+.tab{font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.05em;text-transform:uppercase;background:none;border:0;
+  color:var(--muted);padding:6px 8px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.card{background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.card .lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.card .mnt{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:13px}
+.card .mnt b{font-family:var(--display);letter-spacing:.04em;text-transform:uppercase;font-weight:600;color:var(--ok);font-size:13px;margin-right:4px}
+.partbtn{display:flex;justify-content:space-between;align-items:baseline;gap:10px;width:100%;text-align:left;background:none;border:0;
+  border-bottom:1px solid var(--line);color:var(--fg);padding:8px 2px;cursor:pointer;font:inherit}
+.partbtn:hover .pn,.partbtn.sel .pn{color:var(--accent)}
+.partbtn .pn{font-weight:500}
+.partbtn .go{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 12px;font-size:12.5px}
+.flow span{background:var(--raise);border:1px solid var(--line);border-radius:4px;padding:2px 8px}
+.flow i{color:var(--accent);font-style:normal}
+.formula{font-family:var(--mono);font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:8px 0 12px;white-space:pre-wrap;overflow-x:auto}
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{font-family:var(--display);font-weight:600;letter-spacing:.05em;text-transform:uppercase;text-align:left;color:var(--muted);font-size:13px;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.iv{font-family:var(--mono);font-size:12px;white-space:nowrap;color:var(--accent)}
+.fail{display:grid;gap:3px;padding:10px 0;border-bottom:1px solid var(--line)}
+.fail h3{color:var(--hot)}
+.fail .row{font-size:13px}
+.fail .row b{font-family:var(--display);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-size:12.5px;margin-right:4px}
+.pcm{margin-top:14px}
+.pcm .lab{color:var(--ok)}
+.opt{display:block;width:100%;text-align:left;background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:8px 12px;color:var(--fg);cursor:pointer;font:inherit;margin-bottom:6px}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,var(--raise))}
+.opt.wrong{border-color:var(--hot);background:color-mix(in srgb,var(--hot) 14%,var(--raise))}
+.err{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
+
+@media (max-width:860px){
+  html,body{height:auto}
+  .app{height:auto;grid-template-columns:minmax(0,1fr)}
+  .viewer{height:60vh;min-height:380px}
+  .panel{overflow:visible}
+  .hint{display:none}
+  .slider input{width:96px}
+  h1{font-size:30px}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<div class="app">
+  <div class="viewer" id="viewer">
+    <div class="hud crumb" id="crumb"></div>
+    <div class="hud live" id="live"></div>
+    <div class="hud controls" id="controls"></div>
+    <div class="tip" id="tip" hidden></div>
+  </div>
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+/* =========================================================
+   CONTEÚDO TÉCNICO
+   ========================================================= */
+const NOTE_PLAN = "Intervalos típicos, para estudo. O plano oficial é o do Manual de Operação e Manutenção (OMM) da sua máquina e muda com o resultado do S·O·S, a qualidade do combustível e a severidade da aplicação.";
+
+const SYS = {
+ motor:{
+  n:"Motor diesel Cat C13", tag:"Trem de força", detail:"Vista explodida do motor com o ciclo de 4 tempos animado",
+  sum:"Motor de 6 cilindros em linha, cerca de 12,5 litros, turboalimentado e com pós-arrefecimento ar-ar. Transforma a energia do diesel em torque no volante, que move o conversor de torque, a transmissão e as bombas hidráulicas.",
+  how:[
+   "Cada cilindro trabalha em 4 tempos, que levam duas voltas do virabrequim: <b>admissão</b> (pistão desce e puxa ar), <b>compressão</b> (pistão sobe e o ar esquenta a mais de 500 °C), <b>combustão</b> (o diesel injetado se inflama sozinho pelo calor e empurra o pistão) e <b>escape</b> (pistão sobe e expulsa os gases).",
+   "Com 6 cilindros, há uma combustão a cada 120° de giro. A ordem de ignição é 1-5-3-6-2-4, escolhida para equilibrar as forças ao longo do virabrequim. Na animação, o cilindro que brilha laranja está no tempo de combustão.",
+   "O turbo aproveita a energia do escape para comprimir o ar de admissão. O ar comprimido esquenta, por isso passa pelo pós-arrefecedor ar-ar (ATAAC) antes de entrar no coletor. Ar mais frio é mais denso: cabe mais oxigênio no cilindro e dá para queimar mais diesel com menos fumaça.",
+   "O módulo eletrônico (ECM) lê sensores de rotação, pressão de turbo, temperatura e acelerador e decide quanto e quando injetar. É também ele que reduz a potência (derate) para proteger o motor em superaquecimento ou baixa pressão de óleo."
+  ],
+  flow:["Ar","Filtro de ar","Turbo (compressor)","ATAAC","Coletor de admissão","Cilindros","Coletor de escape","Turbo (turbina)","Escape"],
+  formula:"Ordem de ignição: 1 – 5 – 3 – 6 – 2 – 4\nIntervalo entre combustões = 720° ÷ 6 cilindros = 120°\nComando de válvulas gira a ½ da rotação do virabrequim",
+  parts:{
+   bloco:["Bloco do motor","Estrutura de ferro fundido com os cilindros, as galerias de óleo e de líquido de arrefecimento e os mancais do virabrequim.","Inspecione trincas e vazamentos externos. Na análise de óleo, sódio e potássio altos indicam líquido de arrefecimento entrando no óleo."],
+   cabecote:["Cabeçote e válvulas","Fecha os cilindros por cima e forma a câmara de combustão. Aloja as válvulas de admissão (azuis) e de escape (vermelhas). O C13 tem 4 válvulas por cilindro; o modelo mostra 2 para ficar legível.","Junta do cabeçote danificada pressuriza o sistema de arrefecimento: perda de líquido sem vazamento visível e bolhas no tanque de expansão."],
+   comando:["Comando de válvulas","Eixo com ressaltos (cames) que abre cada válvula no momento certo. Gira a metade da rotação do virabrequim, porque cada cilindro só admite e escapa uma vez a cada duas voltas.","Folga de válvulas fora da especificação causa ruído, perda de potência e queima de válvula. A regulagem segue o intervalo do OMM."],
+   injetores:["Injetores","Pulverizam o diesel em pressão muito alta (acima de 1.500 bar) dentro da câmara no fim da compressão. O ECM define o início e a duração da injeção.","Injetor gotejando gera fumaça, falha de cilindro e diluição de combustível no óleo (aparece no S·O·S). O teste de corte de cilindro no software de diagnóstico isola o injetor ruim."],
+   tampa:["Tampa de válvulas","Cobre o trem de válvulas e mantém o óleo que lubrifica o comando.","Use junta nova a cada abertura para regulagem."],
+   pistoes:["Pistões e anéis","Recebem a força da expansão dos gases. Os anéis vedam a compressão e raspam o excesso de óleo da parede do cilindro.","Desgaste aparece como blow-by (vapor saindo pelo respiro do cárter), consumo de óleo e ferro, cromo e alumínio subindo no S·O·S."],
+   bielas:["Bielas","Ligam cada pistão ao virabrequim. Transformam o vai-e-vem do pistão em rotação.","Sem pressão de óleo, a bronzina de biela funde em minutos. Alarme de baixa pressão de óleo é parada imediata."],
+   virabrequim:["Virabrequim","Eixo de manivelas. Os 6 moentes ficam em pares defasados de 120° (1 e 6, 2 e 5, 3 e 4), o que dá um torque contínuo e equilibrado.","Desgaste de bronzinas aparece como chumbo, estanho e cobre no S·O·S. A folga axial é medida na reforma."],
+   volante:["Volante","Disco pesado que guarda energia entre as combustões e suaviza o giro. Tem a cremalheira onde engrena o motor de partida e entrega o torque ao conversor.","Motor de partida que raspa ao engrenar indica dentes da cremalheira gastos."],
+   amortecedor:["Amortecedor de vibração","Fica na frente do virabrequim e absorve a vibração de torção que poderia trincá-lo.","Amortecedor viscoso estufado, amassado ou vazando é trocado. Ele protege o virabrequim, a peça mais cara do motor."],
+   turbo:["Turbocompressor","A turbina gira com os gases de escape e, no mesmo eixo, o compressor empurra mais ar para os cilindros. Passa de 80.000 rpm.","Desligar o motor sem 3 a 5 minutos de marcha lenta carboniza o óleo no mancal do turbo. Inspecione folga do eixo, vazamento de óleo e as pás."],
+   coletor_adm:["Coletor de admissão","Distribui aos cilindros o ar que veio do turbo e foi resfriado no ATAAC.","Vazamento de ar depois do turbo derruba a potência e gera fumaça preta. Verifique abraçadeiras e mangueiras de pressão."],
+   coletor_esc:["Coletor de escape","Recolhe os gases quentes, acima de 500 °C, e os leva até a turbina.","Trincas, juntas queimadas e isolamento térmico danificado são risco de incêndio, um ponto crítico em mina subterrânea."],
+   carter:["Cárter","Reservatório do óleo lubrificante. A bomba de óleo aspira daqui e pressuriza as galerias do bloco.","Colete a amostra S·O·S sempre no mesmo ponto (válvula de amostragem) e com o motor na temperatura de trabalho."],
+   filtro_oleo:["Filtro de óleo","Retém partículas antes que o óleo chegue aos mancais.","Na troca, corte e inspecione o elemento: limalha visível antecipa uma falha interna."],
+   bomba_agua:["Bomba d'água","Faz o líquido de arrefecimento circular pelo bloco, cabeçote, resfriador de óleo e radiador.","Gotejamento pelo furo de alívio indica selo mecânico gasto. Programe a troca antes que o vazamento aumente."]
+  },
+  plan:[
+   ["Nível de óleo e de líquido de arrefecimento","10 h / turno","Visual, motor nivelado e frio"],
+   ["Indicador de restrição do filtro de ar","10 h / turno","Troque o elemento pelo indicador, não pelo calendário"],
+   ["Drenar água do separador de combustível","10 h / turno","Dreno do filtro primário"],
+   ["Amostra S·O·S de óleo do motor","250 h","Válvula de amostragem, motor quente"],
+   ["Limpeza da colmeia do radiador e do ATAAC","250 h ou menos","Ar comprimido de dentro para fora; antes em galerias com muita poeira"],
+   ["Troca de óleo e filtro do motor","500 h (típico)","Pode encurtar ou alongar conforme o S·O·S"],
+   ["Filtros de combustível primário e secundário","500 h (típico)","Escorve o sistema sem encher o filtro novo com diesel sujo"],
+   ["Folga de válvulas e injetores","Conforme OMM","Motor frio, com ferramenta de giro"],
+   ["Líquido de arrefecimento (ELC)","Teste a cada 500 h; troca longa","Concentração e aditivo; troca no prazo do OMM"]
+  ],
+  fails:[
+   ["Superaquecimento","Temperatura alta, alarme, redução de potência","Colmeia obstruída, termostato travado, bomba d'água, nível baixo","Limpeza da colmeia, teste do termostato e da tampa, teste de pressão do sistema"],
+   ["Fumaça preta e falta de força","Máquina lenta na rampa","Filtro de ar restrito, vazamento de ar de turbo, injetor","Ler o indicador de restrição, medir a pressão de turbo, ler códigos do ECM"],
+   ["Silício alto no S·O·S","Desgaste acelerado de anéis e camisas","Entrada de poeira: duto solto, abraçadeira, vedação do filtro","Inspecionar todo o caminho do ar limpo e vedação do elemento"],
+   ["Combustível no óleo","Óleo fino, nível subindo, pressão de óleo baixa","Injetor gotejando ou vedação do injetor","Teste de corte de cilindro e troca do injetor"]
+  ],
+  pcm:"Use o S·O·S como gatilho de manutenção por condição. Acompanhe a tendência de ferro e cromo (anéis e camisas), silício (poeira), sódio e potássio (líquido de arrefecimento) e fuligem. Um desvio vira uma OS planejada antes da quebra, o que protege a disponibilidade física e alonga o MTBF.",
+  quiz:["Por que o comando de válvulas gira a metade da rotação do virabrequim?",["Para reduzir o desgaste dos ressaltos","Porque cada cilindro completa os 4 tempos em duas voltas do virabrequim","Para economizar combustível"],1,"Admissão, compressão, combustão e escape ocupam 720° de virabrequim. Cada válvula abre uma vez nesse período, ou seja, uma volta do comando."]
+ },
+
+ transmissao:{
+  n:"Conversor de torque e transmissão", tag:"Trem de força", detail:"Vista explodida do conversor e de uma transmissão planetária powershift",
+  sum:"O conversor de torque liga o motor à transmissão por meio do óleo, sem contato mecânico. A transmissão planetária powershift troca de marcha sob carga com embreagens hidráulicas e oferece marchas à frente e à ré.",
+  how:[
+   "<b>Conversor de torque.</b> O impulsor gira com o motor e arremessa óleo contra as pás da turbina, que gira e move a transmissão. Como a ligação é por fluido, a máquina pode parar enfiada na pilha sem o motor morrer.",
+   "O <b>estator</b>, entre a turbina e o impulsor, redireciona o óleo que volta da turbina para que ele ajude o impulsor em vez de frear. Isso multiplica o torque quando a turbina está lenta ou parada (estol), situação típica da penetração na pilha.",
+   "<b>Conjunto planetário.</b> Solar no centro, satélites presos a um porta-satélites, coroa com dentes internos por fora. As engrenagens nunca desengrenam. Quando uma embreagem trava a coroa, a solar (entrada) faz o porta-satélites (saída) girar mais devagar e com mais torque.",
+   "Combinando quais embreagens estão aplicadas em cada conjunto, a transmissão monta as marchas. O módulo eletrônico modula a pressão de cada embreagem para que a troca seja firme e sem tranco."
+  ],
+  flow:["Volante","Impulsor","Óleo","Turbina","Planetários + embreagens","Transferência","Cardãs","Eixos"],
+  formula:"Planetário com coroa travada (entrada na solar, saída no porta-satélites):\ni = 1 + Zcoroa ÷ Zsolar = 1 + 39 ÷ 15 = 3,6 : 1\nO torque na saída é cerca de 3,6 vezes o da entrada, menos as perdas.",
+  parts:{
+   carcaca_t:["Carcaça","Mantém tudo em banho de óleo. O mesmo óleo lubrifica, resfria e aciona as embreagens.","Respiro entupido pressuriza a carcaça e força os retentores."],
+   impulsor:["Impulsor (bomba)","Preso ao volante, gira com o motor e funciona como uma bomba centrífuga de óleo.","Trinca nas pás ou desbalanceamento gera vibração na faixa de rotação do motor."],
+   turbina:["Turbina","Recebe o jato de óleo e move o eixo de entrada da transmissão. Gira mais devagar que o impulsor (escorregamento).","Escorregamento alto aquece o óleo. A temperatura do conversor no painel mostra isso."],
+   estator:["Estator (reator)","Redireciona o óleo e multiplica o torque. Fica numa roda livre: trava em baixa velocidade e gira livre quando turbina e impulsor se igualam.","Roda livre que não trava tira força na pilha. Roda livre que não solta superaquece o conversor em velocidade."],
+   eixo:["Eixo de entrada","Leva o torque da turbina até os conjuntos planetários.","Ruído e vibração junto com a rotação da turbina podem indicar rolamento gasto."],
+   solar:["Engrenagem solar","Engrenagem central do conjunto. Neste exemplo é a entrada de força.","Dentes lascados deixam partículas no óleo e na tela magnética."],
+   satelites:["Satélites e porta-satélites","Três engrenagens giram em volta da solar e arrastam o porta-satélites, que é a saída com rotação reduzida.","Os rolamentos dos satélites aparecem no S·O·S como ferro e cromo."],
+   anel:["Coroa interna (anel)","Engrenagem com dentes por dentro. Aqui está travada por uma embreagem, o que define a relação 3,6 : 1.","Desgaste nos dentes externos de travamento gera tranco na troca de marcha."],
+   planetario2:["Segundo conjunto planetário","Outro conjunto solar, satélites e coroa. Somado ao primeiro, multiplica as combinações de relações.","Mesma lógica de inspeção: partículas na tela e no filtro."],
+   embreagem:["Pacote de embreagem","Discos de fricção alternados com discos de aço. A pressão hidráulica empurra um pistão que aperta o pacote e trava um elemento do planetário. Use o controle Explodir para ver os discos separados.","Patinação e temperatura alta são os sintomas. Material de fricção e cobre no S·O·S indicam desgaste dos discos."],
+   transferencia:["Engrenagem de transferência","Leva a força do eixo da transmissão até o eixo de saída, mais baixo.","Ruído de engrenamento que muda com a carga merece análise de vibração."],
+   saida:["Eixo de saída","Manda a força pelos cardãs aos eixos dianteiro e traseiro (tração nas 4 rodas).","Folga nas cruzetas dos cardãs e lubrificação: inspeção semanal típica."]
+  },
+  plan:[
+   ["Nível de óleo da transmissão","10 h / turno","Motor em marcha lenta, óleo quente"],
+   ["Vazamentos, cardãs e cruzetas","50 h","Visual e folga manual"],
+   ["Amostra S·O·S da transmissão","250 h","Mesmo ponto de coleta, sempre"],
+   ["Filtro da transmissão","500 h (típico)","Corte e inspecione o elemento"],
+   ["Troca de óleo e limpeza das telas","1.000 h (típico)","Tela magnética: registre o tipo de partícula"],
+   ["Teste de estol do conversor","Conforme OMM ou queixa","Compara rotação de estol com a especificação"]
+  ],
+  fails:[
+   ["Patinação de embreagem","Motor sobe de giro e a máquina não acompanha","Discos gastos, pressão de embreagem baixa, vedação do pistão","Medir pressões de embreagem com manômetro e ler o S·O·S"],
+   ["Superaquecimento do conversor","Alarme de temperatura do conversor","Operação em estol prolongado contra a pilha, radiador de óleo sujo","Treinar o operador, limpar o radiador, conferir a roda livre do estator"],
+   ["Trocas bruscas ou atrasadas","Tranco ou demora para engatar","Solenoide, válvula moduladora, calibração","Diagnóstico pelo software e calibração das embreagens"]
+  ],
+  pcm:"A temperatura do conversor é também um indicador de operação. Muito tempo em estol mostra técnica de carga ruim e se paga com treinamento antes de virar troca de discos. Cruze os alarmes de temperatura com o operador e o turno para achar o padrão.",
+  quiz:["Por que a máquina consegue ficar parada contra a pilha com o motor acelerado sem que ele morra?",["Porque a embreagem principal desacopla sozinha","Porque o conversor liga motor e transmissão pelo óleo, que permite escorregamento","Porque o ECM corta a injeção"],1,"Impulsor e turbina não têm contato mecânico. A turbina pode estar parada enquanto o impulsor gira, e o estator ainda multiplica o torque nessa condição."]
+ },
+
+ eixos:{
+  n:"Eixos, comandos finais e freios", tag:"Trem de força", detail:"Vista explodida de um eixo com diferencial, freio SAFR e comando final planetário",
+  sum:"Os eixos recebem a força dos cardãs, viram o movimento em 90°, dividem a força entre as rodas e fazem a redução final dentro do cubo. Os freios ficam dentro do eixo, em banho de óleo.",
+  how:[
+   "O <b>pinhão</b> recebe a força do cardã e engrena na <b>coroa</b>: é a primeira redução, que também vira o giro em 90°.",
+   "O <b>diferencial</b>, dentro da caixa da coroa, deixa a roda de fora girar mais rápido que a de dentro numa curva. Sem ele, os pneus arrastariam em toda curva.",
+   "O <b>semieixo</b> leva o torque até o <b>comando final planetário</b> no cubo. Lá a solar gira, a coroa interna é fixa e o porta-satélites move a roda. A grande redução acontece perto da roda, então o semieixo trabalha com torque menor e pode ser mais leve.",
+   "Os freios <b>SAFR</b> são aplicados por mola e liberados por pressão hidráulica. Se a pressão some (mangueira rompida ou motor desligado), as molas freiam a máquina. É um projeto de falha segura."
+  ],
+  flow:["Cardã","Pinhão","Coroa","Diferencial","Semieixo","Solar","Satélites","Porta-satélites","Roda"],
+  formula:"Redução total do eixo deste modelo:\n(Zcoroa ÷ Zpinhão) × (1 + Zanel ÷ Zsolar)\n= (34 ÷ 9) × (1 + 29 ÷ 11) ≈ 3,8 × 3,6 ≈ 13,7 : 1",
+  parts:{
+   carcaca_e:["Carcaça do eixo","Suporta o peso da máquina e da carga e guarda o óleo dos engrenamentos e dos freios.","Respiro limpo e nível de óleo correto. Óleo leitoso indica entrada de água."],
+   pinhao:["Pinhão","Recebe a força do cardã e engrena na coroa, virando o movimento em 90°.","Folga no rolamento do pinhão aparece como ruído e vazamento no retentor do flange."],
+   diferencial:["Coroa e diferencial","A coroa faz a primeira redução. As engrenagens satélites dentro da caixa deixam as rodas girarem em velocidades diferentes nas curvas.","Ruído de uivo que muda com a carga indica desgaste ou ajuste ruim de coroa e pinhão."],
+   semieixo:["Semieixo","Leva o torque do diferencial até a solar do comando final.","Quebra por torção costuma vir de golpes de carga: pneu girando em falso que agarra de repente."],
+   freio:["Freio SAFR multidisco","Discos que giram com a roda (escuros) alternados com discos fixos (claros), em banho de óleo. Molas aplicam e pressão hidráulica libera.","Teste de freio conforme o procedimento da mina. Freio arrastando aquece o óleo do eixo; meça o desgaste dos discos na reforma."],
+   comando_final:["Comando final planetário","Redução final dentro do cubo: solar (do semieixo), satélites e porta-satélites (a roda), com o anel fixo.","Nível e S·O·S do óleo do comando final. Partículas indicam rolamento ou dente em desgaste."],
+   cubo:["Cubo da roda","Onde o aro do pneu é fixado. Gira devagar e com torque máximo.","Reaperto das porcas do aro no torque do OMM. A vedação duo-cone entre cubo e carcaça impede a entrada de lama."]
+  },
+  plan:[
+   ["Vazamentos nos cubos e no flange do pinhão","10 h / turno","Visual"],
+   ["Teste de freio de serviço e de estacionamento","Por turno ou conforme procedimento","Procedimento da mina, em rampa ou com teste de estol"],
+   ["Nível de óleo do diferencial e dos comandos finais","250 h","Máquina nivelada, bujão na posição certa"],
+   ["Amostra S·O·S dos eixos","250 h ou 500 h","Um ponto de coleta por compartimento"],
+   ["Troca de óleo dos eixos","1.000 a 2.000 h (típico)","Inspecione o bujão magnético"],
+   ["Desgaste dos discos de freio","Conforme OMM","Medição pela ferramenta de verificação de desgaste"]
+  ],
+  fails:[
+   ["Freio arrastando","Óleo do eixo quente, perda de força, cheiro de queimado","Pressão de liberação baixa, mola ou pistão travado","Medir a pressão de liberação e inspecionar o pacote"],
+   ["Vazamento na vedação duo-cone","Óleo no cubo, lama no óleo","Anel de vedação danificado ou montado errado","Troca do par de anéis e limpeza das faces"],
+   ["Ruído na coroa e pinhão","Uivo em aceleração ou desaceleração","Desgaste, folga de rolamento, óleo contaminado","S·O·S, análise de vibração e inspeção do contato dos dentes"]
+  ],
+  pcm:"Freio é item de segurança: a falha no teste vira parada imediata, não backlog. Já o desgaste dos discos e a tendência do S·O·S permitem programar a reforma do eixo na parada planejada, com o eixo reserva já reformado. Esse conceito de componente reserva rotativo reduz muito o tempo de máquina parada.",
+  quiz:["O que acontece com o freio SAFR se uma mangueira de freio estourar?",["A máquina perde o freio","As molas aplicam o freio e a máquina para","Só o freio de estacionamento continua funcionando"],1,"No SAFR a pressão hidráulica serve para soltar o freio. Sem pressão, as molas aplicam os discos. É o mesmo princípio de falha segura do freio de estacionamento."]
+ },
+
+ implemento:{
+  n:"Braços e cilindros de levante", tag:"Implemento", detail:"Vista explodida de um cilindro hidráulico de dupla ação",
+  sum:"Os braços de levante levam a caçamba. Dois cilindros de levante sobem os braços e um cilindro de basculamento gira a caçamba para carregar e descarregar.",
+  how:[
+   "Um cilindro de <b>dupla ação</b> tem duas câmaras separadas pelo êmbolo. Óleo sob pressão no lado base empurra o êmbolo e a haste sai. Óleo no lado haste faz a haste recolher.",
+   "A força é <b>pressão × área</b>. No lado base, a pressão age sobre o círculo inteiro do êmbolo. No lado haste, a área da haste é descontada. Por isso o cilindro empurra com mais força do que puxa, e recolhe mais rápido do que estende, para a mesma vazão.",
+   "A geometria dos braços funciona como alavanca e define a força de desagregação na ponta da caçamba. Pinos e buchas em cada articulação carregam toda essa força, por isso a lubrificação é tão importante.",
+   "Na animação, laranja é a câmara pressurizada e azul é a câmara que está devolvendo óleo ao tanque."
+  ],
+  flow:["Joystick","Válvula de controle","Câmara base ou haste","Êmbolo","Haste","Braço / caçamba"],
+  formula:"Exemplo didático (valores ilustrativos):\nDiâmetro do êmbolo 200 mm → A = π × 0,1² = 0,0314 m²\nPressão 25 MPa (250 bar)\nF = p × A = 25.000.000 × 0,0314 ≈ 785 kN (cerca de 80 t-força)",
+  parts:{
+   camisa:["Camisa (tubo)","Tubo de aço com a parede interna brunida, onde o êmbolo desliza. Tem as portas de entrada e saída de óleo.","Riscos internos deixam o óleo passar de uma câmara para outra e o braço desce sozinho (deriva)."],
+   embolo:["Êmbolo com vedações","Divide a camisa nas duas câmaras. Suas vedações impedem a passagem de óleo de um lado para o outro.","Teste de deriva: levante a caçamba carregada, desligue e meça quanto o braço desce no tempo do procedimento."],
+   haste:["Haste cromada","Transmite a força ao braço ou à caçamba. O cromo resiste à corrosão e ao desgaste.","Pancadas e riscos na haste cortam a vedação do cabeçote e causam vazamento externo."],
+   cabecote_c:["Cabeçote (guia da haste)","Fecha a camisa no lado da haste e guia a haste com buchas.","Folga na bucha guia desalinha a haste e acelera o desgaste da vedação."],
+   vedacoes:["Vedação da haste e raspador","A vedação segura a pressão. O raspador limpa a haste quando ela recolhe, para a poeira não entrar.","Raspador danificado em mina contamina todo o sistema hidráulico. É barato e merece troca preventiva."],
+   oleo:["Câmaras de óleo","Câmara do lado base (área cheia) e câmara do lado haste (área anular). A mesma pressão gera mais força no lado base.","A limpeza do óleo, medida pelo código ISO 4406, define a vida das vedações."]
+  },
+  plan:[
+   ["Lubrificação de pinos e buchas","Diário (verificar o sistema automático)","Graxa nova visível na borda de cada ponto"],
+   ["Vazamento e estado das hastes","10 h / turno","Visual: riscos, pancadas, óleo no raspador"],
+   ["Trincas em soldas dos braços","50 h","Visual; líquido penetrante em ponto suspeito"],
+   ["Folga de pinos e buchas","250 h","Medição com relógio comparador e registro para tendência"],
+   ["Teste de deriva dos cilindros","500 h ou por queixa","Procedimento padrão com caçamba carregada"]
+  ],
+  fails:[
+   ["Braço desce sozinho","Caçamba baixa durante o transporte","Vedação do êmbolo, carretel da válvula, válvula de retenção","Teste de deriva isolando cilindro e válvula"],
+   ["Folga em pinos e buchas","Batida no fim de curso, desalinhamento","Falha de lubrificação, graxa contaminada","Corrigir a lubrificação e programar a troca com usinagem (line boring) se preciso"],
+   ["Vazamento na haste","Óleo escorrendo pela haste","Vedação ou raspador danificados, haste riscada","Reforma do cilindro em oficina e troca preventiva do raspador"]
+  ],
+  pcm:"Registre a folga de cada pino em cada medição. Com a tendência em mãos, a troca de pinos e buchas e a usinagem dos olhais entram numa parada planejada, antes de a folga ovalizar o furo e transformar um serviço de horas numa recuperação estrutural de dias.",
+  quiz:["Com a mesma pressão, por que o cilindro empurra com mais força do que puxa?",["Porque o óleo é mais denso no lado base","Porque no lado base a pressão age sobre a área inteira do êmbolo, e no lado haste a área da haste é descontada","Porque a válvula manda mais pressão para estender"],1,"F = p × A. A área útil no lado haste é a área do êmbolo menos a área da haste."]
+ },
+
+ cacamba:{
+  n:"Caçamba e GET", tag:"Implemento", detail:"Vista explodida da caçamba com lâmina, dentes e chapas de desgaste",
+  sum:"A caçamba recolhe, transporta e descarrega o minério. A carga útil nominal fica na faixa de 15 toneladas, e o volume da caçamba é escolhido conforme a densidade do material.",
+  how:[
+   "LHD significa <b>Load, Haul, Dump</b>: carregar, transportar e descarregar. A caçamba penetra na pilha com a lâmina na horizontal, recolhe para trás para segurar a carga e viaja baixa para manter o centro de gravidade baixo.",
+   "A <b>carga útil</b> é limitada em peso. Por isso o volume certo depende da densidade do material solto. Caçamba grande demais para um minério pesado sobrecarrega eixos, pneus e articulação.",
+   "<b>GET</b> (Ground Engaging Tools) são as peças de desgaste que encostam no material: dentes ou protetores, lâmina, cantoneiras. Elas existem para se gastar no lugar da estrutura da caçamba."
+  ],
+  formula:"Volume adequado ≈ carga útil ÷ densidade do material solto\nEx.: 15 t ÷ 2,2 t/m³ ≈ 6,8 m³\nMinério mais leve (1,8 t/m³) → caçamba maior ≈ 8,3 m³",
+  parts:{
+   concha:["Concha","Fundo, costas e laterais. Define o volume e recebe a carga.","Trincas nos cantos e na ligação com os olhais aparecem por fadiga. Inspecione nas trocas de GET."],
+   lamina:["Lâmina de corte","Aresta frontal de aço de alta dureza que penetra na pilha.","Meça o desgaste e troque antes de expor a chapa do fundo."],
+   dentes:["Dentes e protetores (GET)","Pontas substituíveis de aço resistente à abrasão. Concentram a força de penetração.","Um dente perdido pode travar o britador ou rasgar uma correia. Inspeção a cada turno."],
+   chapas:["Chapas de desgaste","Placas sob o fundo que se gastam no lugar da estrutura.","Meça a espessura restante e troque com folga antes de atingir a chapa base."],
+   cantoneiras:["Cantoneiras laterais","Protegem as bordas laterais quando a caçamba raspa as paredes da galeria.","Desgaste assimétrico mostra que o operador raspa sempre o mesmo lado."],
+   olhais:["Olhais de articulação","Pontos onde os braços e o cilindro de basculamento se prendem à caçamba com pinos e buchas.","Folga no pino da caçamba: meça e registre para tendência."]
+  },
+  plan:[
+   ["GET: dentes, protetores, travas","Por turno","Visual e martelo de teste nas travas"],
+   ["Desgaste da lâmina e chapas","50 h","Medição de espessura com gabarito"],
+   ["Trincas na concha","250 h ou na troca de GET","Visual, líquido penetrante em ponto suspeito"],
+   ["Troca de GET","Pela medição","Planejar com o kit pronto e a caçamba limpa"]
+  ],
+  fails:[
+   ["Perda de dente","Dente ausente na inspeção, alarme no britador","Trava gasta, adaptador desgastado","Rastrear o dente e trocar o sistema de travamento"],
+   ["Desgaste prematuro","Vida do GET menor que a média","Material mais abrasivo, técnica de carga, piso irregular","Revisar o tipo de GET e treinar a operação"],
+   ["Trinca estrutural","Trinca visível no canto ou olhal","Fadiga, sobrecarga, solda de reparo malfeita","Reparo com procedimento de solda qualificado"]
+  ],
+  pcm:"Faça a curva de desgaste do GET em horas de operação. Com ela você prevê em que parada programada a troca cabe, deixa o kit separado e evita que uma peça de poucos reais cause uma parada longa no britador.",
+  quiz:["Uma frota troca para um minério mais denso. O que acontece se a caçamba continuar a mesma?",["Nada, a carga é medida em volume","A máquina passa a carregar mais peso do que a carga útil nominal","A caçamba enche menos"],1,"Mesmo volume com material mais denso significa mais toneladas por passe, sobrecarregando eixos, pneus, articulação e o trem de força."]
+ },
+
+ hidraulico:{
+  n:"Sistema hidráulico", tag:"Sistemas", detail:"Vista explodida de uma bomba de engrenagens, que ilustra o deslocamento positivo",
+  sum:"Bombas acionadas pelo motor geram a vazão de óleo que move os cilindros de levante, basculamento e direção. Válvulas comandadas pelo operador direcionam o óleo, e a direção tem prioridade.",
+  how:[
+   "A bomba <b>não cria pressão, cria vazão</b>. A pressão aparece quando o óleo encontra resistência, como o peso da carga no cilindro. A válvula de alívio limita a pressão máxima.",
+   "Numa bomba de engrenagens, o óleo fica preso nos vãos entre os dentes e a carcaça e é levado da sucção para a saída. No centro, onde os dentes se encontram, ele não consegue voltar. Isso é <b>deslocamento positivo</b>: cada volta empurra um volume fixo de óleo.",
+   "A <b>válvula de controle principal</b> tem carretéis que, movidos pelos joysticks, ligam a bomba a uma câmara do cilindro e a outra câmara ao tanque.",
+   "O óleo volta pelo radiador de óleo e pelo filtro de retorno antes de chegar ao tanque. Limpeza do óleo é a maior influência na vida de bombas, válvulas e vedações. As bombas reais da sua frota podem ser de outro tipo (pistões, por exemplo); o princípio de deslocamento positivo é o mesmo."
+  ],
+  flow:["Tanque","Sucção","Bomba","Válvula de controle","Cilindros","Radiador de óleo","Filtro de retorno","Tanque"],
+  formula:"Vazão = deslocamento × rotação × eficiência volumétrica\nEx.: 160 cm³/volta × 1.800 rpm × 0,95 ≈ 274 L/min\nEficiência caindo = desgaste interno = ciclo lento",
+  parts:{
+   carcaca_b:["Carcaça da bomba","Envolve as engrenagens com folga mínima. O óleo só passa pelos vãos entre os dentes e a parede.","Marcas de raspagem na carcaça indicam rolamento gasto ou contaminação."],
+   eng_motora:["Engrenagem motora","Acionada pelo motor através da caixa de tomada de força. Arrasta a engrenagem movida.","Dentes gastos aumentam o vazamento interno e reduzem a vazão."],
+   eng_movida:["Engrenagem movida","Gira em sentido contrário. No centro, onde os dentes engrenam, o óleo é expulso para a saída.","Mesmo desgaste da motora. As duas são trocadas juntas."],
+   placas:["Placas de desgaste laterais","Vedam as faces das engrenagens.","Desgaste aqui aumenta o vazamento interno e o ciclo fica lento."],
+   portas:["Sucção e pressão","Entrada larga (azul) para o óleo entrar devagar e sem cavitar, saída menor (laranja) com alta pressão.","Ruído de cascalho é cavitação: filtro de sucção obstruído, óleo frio e viscoso ou nível baixo."]
+  },
+  plan:[
+   ["Nível do tanque hidráulico","10 h / turno","Visor, braços abaixados"],
+   ["Mangueiras e conexões","10 h / turno","Atrito, bolhas, vazamentos. Nunca procure vazamento com a mão"],
+   ["Amostra S·O·S e contagem de partículas","250 h","Código ISO 4406"],
+   ["Filtros de retorno e piloto","500 h (típico) ou por indicador","Corte e inspeção do elemento"],
+   ["Troca de óleo hidráulico","2.000 a 4.000 h (típico)","Pode alongar com S·O·S e filtragem boa"],
+   ["Pressões de alívio e tempos de ciclo","Conforme OMM","Manômetro nos pontos de teste e cronômetro"]
+  ],
+  fails:[
+   ["Ciclo lento","Braço demora a subir","Bomba gasta, alívio desregulado, filtro de sucção obstruído, ar no óleo","Medir vazão e pressão, cronometrar ciclos"],
+   ["Superaquecimento do óleo","Alarme de temperatura","Radiador sujo, alívio abrindo muito tempo, vazamento interno","Limpar o radiador, conferir o alívio e a operação"],
+   ["Mangueira rompida","Vazamento súbito, perda de função","Atrito, idade, montagem torcida","Isolar a máquina. Óleo em alta pressão perfura a pele: é emergência médica"]
+  ],
+  pcm:"Trate mangueiras como componente com vida útil. Etiquete cada mangueira com a data de montagem, mantenha estoque das críticas montadas e faça a troca preventiva por idade nas paradas. Mangueira estourada na galeria costuma custar horas de máquina parada e um risco de incêndio.",
+  quiz:["O braço sobe devagar mesmo com o motor acelerado. Qual é a suspeita mais provável?",["Pressão do pneu baixa","Vazamento interno na bomba ou alívio regulado abaixo do especificado","Óleo do motor vencido"],1,"Menos vazão útil ou óleo escapando pelo alívio significa menos volume por segundo nos cilindros: ciclo lento."]
+ },
+
+ chassi:{
+  n:"Chassi, articulação e direção", tag:"Estrutura", detail:"Vista explodida da articulação central com os cilindros de direção",
+  sum:"A máquina é dividida em dois chassis ligados por uma articulação central. A direção funciona dobrando a máquina no meio, com dois cilindros.",
+  how:[
+   "Dois <b>pinos verticais</b> (superior e inferior), no mesmo eixo, ligam o chassi dianteiro ao traseiro. Toda a força da caçamba passa por eles.",
+   "Os <b>cilindros de direção</b> trabalham em par: um estende enquanto o outro recolhe e o chassi dianteiro gira em torno dos pinos, cerca de 40° para cada lado.",
+   "Em uma máquina articulada, as rodas traseiras seguem a trilha das dianteiras. Isso permite manobrar em galerias estreitas e fazer curvas fechadas sem raspar as paredes.",
+   "O eixo traseiro oscila em relação ao chassi para manter as quatro rodas no piso irregular da mina."
+  ],
+  formula:"Raio de curva menor + traseira seguindo a dianteira\n→ menos manobras por ciclo\n→ mais ciclos por hora (produtividade)",
+  parts:{
+   quadro_tras:["Chassi traseiro","Leva motor, transmissão, cabine e tanques. Os garfos superior e inferior recebem os pinos da articulação.","Trincas em soldas perto dos garfos: inspeção visual e ensaio não destrutivo nas reformas."],
+   quadro_diant:["Chassi dianteiro","Leva o eixo dianteiro, os braços e a caçamba. Gira em torno dos pinos para esterçar.","Mesma atenção a trincas na região dos olhais da articulação."],
+   pino:["Pinos da articulação","Pinos verticais superior e inferior, alinhados no mesmo eixo.","Medir folga vertical e radial em intervalo fixo e registrar a tendência."],
+   rolamento:["Rolamentos da articulação","Rolamentos de rolos cônicos que permitem o giro sob carga muito alta.","Confirme que a lubrificação automática está chegando: graxa nova visível na borda."],
+   cil_direcao:["Cilindros de direção","Um estende enquanto o outro recolhe, girando o chassi dianteiro. Comandados pela válvula de direção, que tem prioridade sobre o implemento.","Vazamento e folga nos olhais dos cilindros causam folga no volante e direção imprecisa."]
+  },
+  plan:[
+   ["Lubrificação automática funcionando","Diário","Nível do reservatório de graxa e ciclo da bomba"],
+   ["Folga dos pinos da articulação","250 h","Relógio comparador com a máquina carregada e descarregada"],
+   ["Torque dos parafusos de retenção dos pinos","500 h (típico)","Torquímetro calibrado"],
+   ["Trincas estruturais","Na reforma ou por suspeita","Partículas magnéticas ou líquido penetrante"]
+  ],
+  fails:[
+   ["Folga na articulação","Batida ao inverter o sentido, desalinhamento","Falha de lubrificação, rolamento gasto","Programar a troca de rolamentos e pinos"],
+   ["Trinca por fadiga","Trinca na solda perto dos garfos","Impactos repetidos, piso ruim, sobrecarga","Reparo qualificado e análise de causa raiz"],
+   ["Direção pesada ou lenta","Esforço alto, resposta lenta","Válvula de prioridade, bomba, cilindro com passagem interna","Medir pressão e tempo de esterçamento batente a batente"]
+  ],
+  pcm:"Piso de galeria ruim aparece no chassi como trinca e na articulação como folga. Quando a causa raiz está na infraestrutura, a ação certa é uma OS para a equipe de vias, não só a troca do pino. Um 5 Porquês bem feito costuma chegar lá.",
+  quiz:["Por que as máquinas LHD são articuladas em vez de usar direção nas rodas dianteiras?",["Porque é mais barato","Porque a traseira segue a trilha da dianteira e a máquina faz curvas fechadas em galerias estreitas","Porque assim o motor fica mais protegido"],1,"A articulação central reduz o raio de giro e mantém as duas metades na mesma trilha, o que é essencial em galerias estreitas."]
+ },
+
+ cabine:{
+  n:"Cabine do operador", tag:"Operação", detail:null,
+  sum:"Cabine com estrutura de proteção contra capotamento e queda de objetos (ROPS/FOPS). O operador senta de lado, porque a LHD trabalha tanto para frente quanto de ré.",
+  how:[
+   "A posição <b>transversal</b> do assento deixa o operador ver para os dois sentidos de deslocamento sem torcer o corpo. Uma LHD passa metade do ciclo de ré.",
+   "A estrutura <b>ROPS/FOPS</b> é certificada. Qualquer furo ou solda não autorizada invalida a certificação.",
+   "Joysticks comandam direção, levante e basculamento. O painel mostra temperaturas, pressões e alarmes, e grava eventos que ajudam no diagnóstico.",
+   "Muitas versões permitem operação remota ou semiautônoma, o que tira o operador de áreas de risco como a frente de lavra."
+  ],
+  parts:{},
+  comps:["Estrutura ROPS/FOPS","Assento transversal com cinto","Joysticks de direção e implemento","Painel com alarmes e histórico de eventos","Ar-condicionado e pressurização com filtro","Sistema de supressão de incêndio (conforme a frota)"],
+  plan:[
+   ["Checklist pré-uso: cinto, buzina, luzes, alarme de ré, extintor","Início de turno","Operador, com registro"],
+   ["Teste do freio de estacionamento","Início de turno","Procedimento da mina"],
+   ["Filtros de ar da cabine","250 h (típico)","Troca ou limpeza conforme o ambiente"],
+   ["Sistema de supressão de incêndio","Conforme fabricante do sistema","Inspeção por pessoa habilitada"]
+  ],
+  fails:[
+   ["Alarme ignorado","Evento repetido no histórico","Alarme falso recorrente que treinou o operador a ignorar","Corrigir a causa do alarme falso e rever o treinamento"],
+   ["Pressurização fraca","Poeira dentro da cabine","Filtro saturado, vedação de porta","Troca do filtro e das vedações"]
+  ],
+  pcm:"O checklist pré-uso é a primeira linha da manutenção. Digitalizado, cada não conformidade vira uma nota de manutenção com data e hora, alimenta o backlog e mostra quais itens falham mais por máquina.",
+  quiz:["Por que o operador da LHD senta de lado?",["Para caber em galerias baixas","Porque a máquina se desloca para frente e de ré com a mesma frequência","Para facilitar a manutenção da cabine"],1,"Uma LHD trabalha em vaivém. Sentado de lado, o operador enxerga os dois sentidos com o mesmo conforto."]
+ },
+
+ pneus:{
+  n:"Rodas e pneus", tag:"Rodagem", detail:null,
+  sum:"Pneus de grande porte com banda de rodagem lisa e profunda, próprios para o piso de rocha de mina subterrânea. São um dos maiores custos por hora da máquina.",
+  how:[
+   "Em mina subterrânea se usa banda <b>L5S</b>: lisa e muito profunda. Ela resiste a cortes da rocha melhor do que uma banda com garras.",
+   "A <b>pressão correta</b>, medida a frio, define a área de contato e o aquecimento. Pressão baixa flexiona demais o pneu, esquenta e separa as camadas.",
+   "A maior parte das perdas de pneu vem de <b>cortes</b> por rocha solta no piso e de patinação. Ou seja, depende muito da conservação das vias e da técnica do operador.",
+   "Confira na sua frota a medida exata do pneu e o aro aprovado para a máquina."
+  ],
+  parts:{},
+  comps:["Pneu radial com banda L5S","Aro de várias peças com anel de trava","Válvula e, quando houver, sensor de pressão","Porcas de roda"],
+  plan:[
+   ["Pressão a frio","Diário","Calibrador aferido; nunca alivie pressão de pneu quente"],
+   ["Cortes, bolhas e desgaste","10 h / turno","Visual e registro com foto"],
+   ["Torque das porcas de roda","Conforme OMM, e após troca de pneu","Torquímetro"],
+   ["Rodízio e gestão de carcaça","Pela medição de sulco","Programa de gestão de pneus"]
+  ],
+  fails:[
+   ["Corte lateral","Corte profundo no flanco","Rocha solta nas laterais da via, raspagem na parede","Limpeza de vias e revisão da técnica de operação"],
+   ["Separação por calor","Bolha na banda","Pressão baixa, sobrecarga, longas distâncias em velocidade","Controle de pressão e de carga útil"]
+  ],
+  pcm:"Acompanhe custo por hora de pneu por máquina e por área de lavra. Quando uma área destrói pneus, a causa raiz costuma ser a via, e a ação vai para a infraestrutura. Atenção: troca de pneu de mineração é serviço de alto risco e exige procedimento e equipe treinada.",
+  quiz:["Qual é a causa mais comum de perda de pneu em mina subterrânea?",["Desgaste natural da banda","Cortes por rocha no piso e nas laterais da galeria","Envelhecimento da borracha"],1,"Cortes por rocha dominam as perdas. Conservação das vias e técnica de operação pesam mais do que o próprio pneu."]
+ }
+};
+const ORDER = ["motor","transmissao","eixos","hidraulico","implemento","cacamba","chassi","cabine","pneus"];
+
+/* =========================================================
+   CENA 3D
+   ========================================================= */
+const viewer = document.getElementById("viewer");
+const panel = document.getElementById("panel");
+const crumb = document.getElementById("crumb");
+const controls = document.getElementById("controls");
+const live = document.getElementById("live");
+const tip = document.getElementById("tip");
+let liveCache="";
+function setLive(h){ if(h!==liveCache){ live.innerHTML=h; liveCache=h; } }
+
+if (!window.THREE) { viewer.insertAdjacentHTML("beforeend",'<div class="err">Não foi possível carregar a biblioteca 3D. Verifique a conexão e recarregue a página.</div>'); throw new Error("three missing"); }
+const V3 = (x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
+const TAU = Math.PI*2;
+
+let renderer;
+try { renderer = new THREE.WebGLRenderer({antialias:true, alpha:true}); }
+catch(e){ viewer.insertAdjacentHTML("beforeend",'<div class="err">Seu navegador não liberou WebGL, necessário para o modelo 3D. O conteúdo técnico continua disponível no painel.</div>'); }
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, .05, 200);
+if (renderer){
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = .95;
+  viewer.prepend(renderer.domElement);
+}
+scene.add(new THREE.HemisphereLight(0xdfe7f0, 0x1a1610, .5));
+const sun = new THREE.DirectionalLight(0xfff1dc, 1.25); sun.position.set(6,10,5); scene.add(sun);
+const fill = new THREE.DirectionalLight(0x9ccbe6, .45); fill.position.set(-7,4,-6); scene.add(fill);
+const floor = new THREE.Group(); scene.add(floor);
+{ const g = new THREE.Mesh(new THREE.CircleGeometry(16,64), new THREE.MeshStandardMaterial({color:0x07090a, roughness:1, metalness:0}));
+  g.rotation.x = -Math.PI/2; floor.add(g);
+  const grid = new THREE.GridHelper(32, 64, 0x262d31, 0x161a1d); grid.position.y = .002; floor.add(grid); }
+
+/* ---------- helpers de geometria ---------- */
+function mat(c,o={}){ const m=new THREE.MeshStandardMaterial(Object.assign({color:c, roughness:.55, metalness:.3}, o)); m.color.convertSRGBToLinear(); return m; }
+function glass(c,op=.18){ const m = mat(c,{transparent:true, opacity:op, depthWrite:false, roughness:.25, metalness:.1, side:THREE.DoubleSide}); m.userData.glass = true; return m; }
+function mesh(g,m){ const o = new THREE.Mesh(g,m); if (m.userData.glass) o.userData.glass = true; return o; }
+function box(w,h,d,m){ return mesh(new THREE.BoxGeometry(w,h,d), m); }
+function cyl(r1,r2,h,m,seg=28,open=false){ return mesh(new THREE.CylinderGeometry(r1,r2,h,seg,1,open), m); }
+function cylX(r,h,m,seg=28,open=false){ const o = cyl(r,r,h,m,seg,open); o.geometry.rotateZ(Math.PI/2); return o; }
+function cylZ(r,h,m,seg=28,open=false){ const o = cyl(r,r,h,m,seg,open); o.geometry.rotateX(Math.PI/2); return o; }
+function at(o,x,y,z){ o.position.set(x,y,z); return o; }
+const UP = V3(0,1,0);
+function between(o,a,b){ const d = V3().subVectors(b,a), L = d.length(); o.position.copy(a).addScaledVector(d,.5); o.quaternion.setFromUnitVectors(UP, d.normalize()); o.scale.set(1,L,1); }
+function teeth(p,r0,r1,n){ for (let i=0;i<n;i++){ const a=i/n*TAU, d=TAU/n;
+  [[r0,a],[r1,a+d*.2],[r1,a+d*.5],[r0,a+d*.7]].forEach(([r,an],j)=>{ const x=r*Math.cos(an), y=r*Math.sin(an); (i===0&&j===0)?p.moveTo(x,y):p.lineTo(x,y); }); }
+  const x=r0, y=0; p.lineTo(x,y); }
+function gearGeo(r0,r1,n,depth,hole=0){ const s=new THREE.Shape(); teeth(s,r0,r1,n);
+  if (hole){ const h=new THREE.Path(); h.absarc(0,0,hole,0,TAU,true); s.holes.push(h); }
+  const g=new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:false,curveSegments:6}); g.translate(0,0,-depth/2); return g; }
+function ringGeo(rOut,r0,r1,n,depth){ const s=new THREE.Shape(); s.absarc(0,0,rOut,0,TAU,false);
+  const h=new THREE.Path(); teeth(h,r0,r1,n); s.holes.push(h);
+  const g=new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:false,curveSegments:48}); g.translate(0,0,-depth/2); return g; }
+// eixo: "x" ou "z" (padrão da extrusão é z)
+function gear(r0,r1,n,depth,m,axis="z",hole=0){ const g=gearGeo(r0,r1,n,depth,hole); if(axis==="x") g.rotateY(Math.PI/2); return mesh(g,m); }
+function ring(rOut,r0,r1,n,depth,m,axis="z"){ const g=ringGeo(rOut,r0,r1,n,depth); if(axis==="x") g.rotateY(Math.PI/2); return mesh(g,m); }
+function makeCyl(rb,rr,cb,cr){ const b=mesh(new THREE.CylinderGeometry(rb,rb,1,18), mat(cb,{metalness:.4})); const r=mesh(new THREE.CylinderGeometry(rr,rr,1,14), mat(cr,{metalness:.9,roughness:.18})); return {b,r,Lb:0,Lr:0}; }
+function setCyl(c,A,B){ const d=V3().subVectors(B,A); const L=d.length(); d.normalize(); const q=new THREE.Quaternion().setFromUnitVectors(UP,d);
+  const Lb=Math.min(c.Lb,L), Lr=Math.min(c.Lr,L);
+  c.b.position.copy(A).addScaledVector(d,Lb/2); c.b.quaternion.copy(q); c.b.scale.set(1,Lb,1);
+  c.r.position.copy(B).addScaledVector(d,-Lr/2); c.r.quaternion.copy(q); c.r.scale.set(1,Lr,1); }
+
+/* cores */
+const C = {yel:0xe1a91d, dk:0x2b3034, st:0x8e979d, steel:0xb9c2c7, tire:0x141516, rim:0xc79318, glassC:0x6f8fa3, cop:0xb87333, fric:0x6b4a2e, oilHot:0xff7b39, oilCold:0x4db6dc, red:0xd9533b, blue:0x3f9fd0, green:0x7aa37f};
+
+/* ---------- caçamba (compartilhada entre máquina e vista explodida) ---------- */
+function plate(ax,ay,bx,by,t,W,m){ const dx=bx-ax, dy=by-ay, L=Math.hypot(dx,dy); const o=box(L,t,W,m); o.position.set((ax+bx)/2,(ay+by)/2,0); o.rotation.z=Math.atan2(dy,dx); return o; }
+function bucketPieces(){
+  const W=2.5, Y=C.yel, out={concha:[],lamina:[],dentes:[],chapas:[],cantL:[],cantR:[],olhais:[]};
+  out.concha.push(plate(0,-.62,1.7,-.62,.07,W,mat(Y)));
+  out.concha.push(plate(-.15,.55,0,-.62,.07,W,mat(Y)));
+  out.concha.push(plate(-.15,.55,.45,.78,.07,W,mat(Y)));
+  const sh=new THREE.Shape(); [[0,-.62],[1.7,-.62],[1.25,.05],[.45,.78],[-.15,.55]].forEach(([x,y],i)=>i?sh.lineTo(x,y):sh.moveTo(x,y));
+  for (const s of [-1,1]){ const g=new THREE.ExtrudeGeometry(sh,{depth:.06,bevelEnabled:false}); g.translate(0,0,-.03); const o=mesh(g,mat(Y)); o.position.z=s*(W/2); out.concha.push(o); }
+  out.lamina.push(at(box(.26,.09,W+.08,mat(C.dk,{metalness:.6})),1.78,-.6,0));
+  for (let i=0;i<5;i++){ const z=(i-2)*.52; const t=new THREE.Group();
+    t.add(at(box(.22,.12,.16,mat(C.dk,{metalness:.5})),0,0,0)); t.add(at(box(.24,.07,.13,mat(C.steel,{metalness:.7,roughness:.3})),.2,-.01,0));
+    t.position.set(1.98,-.58,z); out.dentes.push(t); }
+  for (let i=0;i<3;i++) out.chapas.push(at(box(.42,.04,W-.2,mat(C.st,{metalness:.6})),.3+i*.5,-.68,0));
+  out.cantL.push(at(box(.7,.32,.06,mat(C.dk,{metalness:.5})),1.35,-.42,W/2+.06));
+  out.cantR.push(at(box(.7,.32,.06,mat(C.dk,{metalness:.5})),1.35,-.42,-W/2-.06));
+  for (const z of [-.75,.75]) out.olhais.push(at(cylZ(.12,.24,mat(C.st)),-.08,-.45,z));
+  out.olhais.push(at(cylZ(.1,.36,mat(C.st)),-.12,.35,0));
+  return out;
+}
+
+/* ---------- máquina completa ---------- */
+const sysMeshes = {}; ORDER.forEach(k=>sysMeshes[k]=[]);
+const loader = { root:new THREE.Group() };
+function tag(o,sys,shell=false){ o.traverse(m=>{ if(m.isMesh){ m.userData.sys=sys; if(shell) m.userData.shell=true; sysMeshes[sys].push(m); } }); return o; }
+function makeWheel(){ const g=new THREE.Group();
+  g.add(cylZ(.85,.62,mat(C.tire,{roughness:.95,metalness:0}),40));
+  g.add(cylZ(.52,.645,mat(C.rim,{metalness:.5}),32));
+  g.add(cylZ(.2,.7,mat(C.dk),20));
+  for (let i=0;i<22;i++){ const a=i/22*TAU; const l=at(box(.16,.07,.6,mat(C.tire,{roughness:.95,metalness:0})),Math.cos(a)*.85,Math.sin(a)*.85,0); l.rotation.z=a; g.add(l); }
+  return g; }
+function buildLoader(){
+  const R=loader.root, F=new THREE.Group(); R.add(F); loader.front=F;
+  const add=(p,sys,o,shell)=>{ p.add(o); tag(o,sys,shell); return o; };
+  const shellMat=c=>{ const m=mat(c); m.transparent=true; m.opacity=1; return m; };
+  // chassi traseiro e para-lamas
+  add(R,"chassi",at(box(4.6,.65,1.7,shellMat(C.yel)),-2.75,.95,0),true);
+  for (const s of [-1,1]) add(R,"chassi",at(box(1.9,.08,.72,mat(C.yel)),-3.3,1.86,s*1.2));
+  add(R,"chassi",at(box(.6,.1,.75,mat(C.yel)),-.3,.75,0)); add(R,"chassi",at(box(.6,.1,.75,mat(C.yel)),-.3,1.3,0));
+  add(R,"chassi",at(cyl(.08,.08,.75,mat(C.steel,{metalness:.8})),0,1.02,0));
+  // motor
+  add(R,"motor",at(box(2.0,.8,1.7,shellMat(C.yel)),-4.0,1.68,0),true);
+  add(R,"motor",at(box(1.5,.62,.75,mat(C.dk)),-4.0,1.5,0));
+  add(R,"motor",at(box(1.3,.12,.5,mat(C.yel)),-4.0,1.86,0));
+  add(R,"motor",at(box(.2,1.0,1.6,mat(C.dk)),-5.1,1.62,0));
+  for (let i=0;i<6;i++) add(R,"motor",at(box(.03,.1,1.5,mat(0x1a1d20)),-5.21,1.62+(i-2.5)*.15,0));
+  add(R,"motor",at(cyl(.17,.17,.42,mat(C.dk)),-3.5,2.28,-.5));
+  add(R,"motor",at(cyl(.12,.12,.5,mat(C.st,{metalness:.7})),-4.55,2.3,.5));
+  add(R,"motor",at(box(1.0,.55,.55,mat(C.dk)),-2.4,1.55,-.55));
+  // transmissão
+  add(R,"transmissao",at(cylX(.32,.3,mat(C.st)),-3.05,1.15,0));
+  add(R,"transmissao",at(box(1.1,.55,.75,mat(C.dk)),-2.2,.95,0));
+  { const s=mesh(new THREE.CylinderGeometry(.05,.05,1,10),mat(C.st,{metalness:.8})); between(s,V3(-1.65,.8,0),V3(0,.8,0)); add(R,"transmissao",s); }
+  { const s=mesh(new THREE.CylinderGeometry(.05,.05,1,10),mat(C.st,{metalness:.8})); between(s,V3(-2.75,.8,0),V3(-3.0,.85,0)); add(R,"transmissao",s); }
+  // eixo traseiro e rodas
+  add(R,"eixos",at(cylZ(.17,2.0,mat(C.dk)),-3.3,.85,0)); add(R,"eixos",at(new THREE.Mesh(new THREE.SphereGeometry(.33,20,14),mat(C.dk)),-3.3,.85,0));
+  loader.wheels=[];
+  for (const s of [-1,1]){ const w=add(R,"pneus",makeWheel()); w.position.set(-3.3,.85,s*1.2); loader.wheels.push(w); }
+  // cabine
+  { const cab=new THREE.Group(); cab.position.set(-1.4,1.86,.95);
+    cab.add(at(box(1.4,.25,1.0,mat(C.yel)),0,-.47,0));
+    cab.add(at(box(1.46,.08,1.06,mat(C.yel)),0,.6,0));
+    for (const [x,z] of [[-.68,-.48],[.68,-.48],[-.68,.48],[.68,.48]]) cab.add(at(box(.08,1.1,.08,mat(C.yel)),x,.06,z));
+    cab.add(at(box(1.28,.85,.02,glass(C.glassC,.45)),0,.12,.49)); cab.add(at(box(1.28,.85,.02,glass(C.glassC,.45)),0,.12,-.49));
+    cab.add(at(box(.02,.85,.9,glass(C.glassC,.45)),.69,.12,0)); cab.add(at(box(.02,.85,.9,glass(C.glassC,.45)),-.69,.12,0));
+    cab.add(at(box(.45,.5,.45,mat(C.dk)),0,-.1,0));
+    add(R,"cabine",cab); }
+  // hidráulico
+  add(R,"hidraulico",at(box(1.2,.7,.8,mat(C.yel)),-1.4,1.62,-.85));
+  add(R,"hidraulico",at(cylX(.12,.35,mat(C.st)),-2.75,1.25,-.42));
+  add(R,"hidraulico",at(box(.5,.3,.4,mat(C.dk)),-.75,1.45,-.5));
+  for (const z of [-.3,-.38]){ const h=mesh(new THREE.CylinderGeometry(.03,.03,1,8),mat(0x111111,{metalness:0,roughness:.8})); between(h,V3(-.75,1.35,z),V3(0,1.15,z)); add(R,"hidraulico",h); }
+  // cilindros de direção
+  loader.steer=[];
+  for (const s of [-1,1]){ const c=makeCyl(.08,.045,C.dk,C.steel); c.Lb=1.0; c.Lr=1.0; add(R,"chassi",c.b); add(R,"chassi",c.r); c.s=s; loader.steer.push(c); }
+
+  // ---------- conjunto dianteiro ----------
+  add(F,"chassi",at(box(2.6,.65,1.7,shellMat(C.yel)),1.5,.95,0),true);
+  add(F,"chassi",at(box(.55,.12,.6,mat(C.yel)),.1,1.02,0));
+  for (const s of [-1,1]) add(F,"chassi",at(box(1.9,.08,.72,mat(C.yel)),1.9,1.86,s*1.2));
+  { const s=mesh(new THREE.CylinderGeometry(.05,.05,1,10),mat(C.st,{metalness:.8})); between(s,V3(0,.8,0),V3(1.9,.85,0)); add(F,"transmissao",s); }
+  add(F,"eixos",at(cylZ(.17,2.0,mat(C.dk)),1.9,.85,0)); add(F,"eixos",at(new THREE.Mesh(new THREE.SphereGeometry(.33,20,14),mat(C.dk)),1.9,.85,0));
+  for (const s of [-1,1]){ const w=add(F,"pneus",makeWheel()); w.position.set(1.9,.85,s*1.2); loader.wheels.push(w); }
+  for (const s of [-1,1]) add(F,"chassi",at(box(.12,.12,.2,mat(0xfff2c8,{emissive:0x8a7a40})),2.82,1.2,s*.6));
+  { const h=mesh(new THREE.CylinderGeometry(.03,.03,1,8),mat(0x111111,{metalness:0,roughness:.8})); between(h,V3(0,1.15,-.34),V3(.9,1.45,-.34)); add(F,"hidraulico",h); }
+  // braços
+  const A=new THREE.Group(); A.position.set(.7,1.5,0); F.add(A); loader.arm=A;
+  const ang=Math.atan2(-1.25,2.6), len=Math.hypot(2.6,1.25);
+  for (const s of [-1,1]){ const b=box(len,.32,.14,mat(C.yel)); b.position.set(1.3,-.625,s*.75); b.rotation.z=ang; add(A,"implemento",b);
+    add(A,"implemento",at(box(.2,.2,.32,mat(C.yel)),.95,-.42,s*.6)); }
+  add(A,"implemento",at(cylZ(.11,1.5,mat(C.yel)),1.0,-.48,0));
+  add(A,"implemento",at(box(.3,.45,.3,mat(C.yel)),.5,.2,0));
+  add(A,"implemento",at(cylZ(.13,1.7,mat(C.st)),0,0,0));
+  // caçamba
+  const BK=new THREE.Group(); BK.position.set(2.6,-1.25,0); A.add(BK); loader.bucket=BK;
+  const inner=new THREE.Group(); inner.position.set(.08,.45,0); BK.add(inner);
+  const bp=bucketPieces(); Object.values(bp).flat().forEach(o=>add(inner,"cacamba",o));
+  // cilindros de levante e basculamento
+  loader.lift=[]; for (const s of [-1,1]){ const c=makeCyl(.11,.06,C.dk,C.steel); c.Lb=.72; c.Lr=.76; c.s=s; add(R,"implemento",c.b); add(R,"implemento",c.r); loader.lift.push(c); }
+  loader.tilt=makeCyl(.12,.07,C.dk,C.steel); loader.tilt.Lb=1.3; loader.tilt.Lr=1.3; add(R,"implemento",loader.tilt.b); add(R,"implemento",loader.tilt.r);
+  scene.add(R);
+  setPose(0,0,0);
+}
+function setPose(arm,bw,steer){
+  loader.front.rotation.y=steer; loader.arm.rotation.z=arm; loader.bucket.rotation.z=bw-arm;
+  loader.root.updateMatrixWorld(true);
+  for (const c of loader.lift) setCyl(c, loader.front.localToWorld(V3(1.2,.62,c.s*.6)), loader.arm.localToWorld(V3(.95,-.42,c.s*.6)));
+  setCyl(loader.tilt, loader.arm.localToWorld(V3(.5,.35,0)), loader.bucket.children[0].localToWorld(V3(-.12,.35,0)));
+  for (const c of loader.steer) setCyl(c, V3(-.9,.95,c.s*.95), loader.front.localToWorld(V3(.8,.95,c.s*.95)));
+}
+
+/* ciclo de carga */
+const CYCLE=[[0,0,0,0,"Aproximação da pilha"],[2,0,0,0,"Penetração na pilha com a lâmina na horizontal"],[3.5,.1,.6,0,"Recolhe a caçamba para segurar a carga"],
+  [5,.1,.6,0,"Transporte com a caçamba baixa"],[6.5,.1,.6,.6,"Curva: a máquina dobra na articulação central"],[8,.1,.6,0,"Chegada ao ponto de descarga"],
+  [9.5,.85,.6,0,"Levante dos braços"],[11,.85,-.85,0,"Basculamento: descarga do material"],[12.5,.85,-.85,0,"Retorno: abaixa e nivela a caçamba"],[14,0,0,0,""]];
+function cyclePose(t){ t%=14; let i=0; while(i<CYCLE.length-2 && t>=CYCLE[i+1][0]) i++;
+  const a=CYCLE[i], b=CYCLE[i+1]; let u=(t-a[0])/(b[0]-a[0]); u=u*u*(3-2*u);
+  const L=(k)=>a[k]+(b[k]-a[k])*u;
+  const moving = t<2 || (t>=5 && t<8) || t>=12.5;
+  return {arm:L(1),bw:L(2),steer:L(3),label:a[4],moving, dir: t>=12.5?-1:1}; }
+
+/* =========================================================
+   VISTAS EXPLODIDAS
+   ========================================================= */
+function newDet(){ return {group:new THREE.Group(), parts:[], update:()=>{}, cam:{t:[0,0,0],r:7}, floorY:-1.2, live:()=>"" }; }
+function P(det,id,ex,base=[0,0,0]){ const g=new THREE.Group(); g.userData.part=id; g.userData.base=V3(...base); g.userData.ex=V3(...ex); g.userData.anim=V3(); det.group.add(g); det.parts.push(g); return g; }
+
+const DET = {
+ motor(){ const d=newDet(); d.cam={t:[0,.9,0],r:8.6}; d.floorY=-1.9; d.ex0=0;
+  const Rk=.17, Lr=.55, X=i=>(i-2.5)*.5;
+  const OFF=[0,480,240,600,120,360].map(v=>v*Math.PI/180);
+  const bloco=P(d,"bloco",[0,0,-1.8]);
+  bloco.add(at(box(3.3,1.3,.78,glass(0x9aa5ad,.14)),0,.33,0));
+  for (let i=0;i<6;i++) bloco.add(at(cyl(.18,.18,.6,glass(0xb7c2c8,.22),28,true),X(i),.69,0));
+  const cab=P(d,"cabecote",[0,1.1,0]); cab.add(at(box(3.3,.27,.78,glass(0xa9b2b8,.28)),0,1.12,0));
+  const valves=[];
+  for (let i=0;i<6;i++){ const vv={};
+    for (const [s,key,col] of [[1,"in",C.blue],[-1,"ex",C.red]]){ const g=new THREE.Group();
+      g.add(at(cyl(.012,.012,.28,mat(C.steel,{metalness:.8})),0,.14,0)); g.add(cyl(.055,.055,.016,mat(col,{metalness:.4})));
+      g.position.set(X(i)+s*.1,1.0,s*.15); cab.add(g); vv[key]=g; }
+    valves.push(vv); }
+  const cam=P(d,"comando",[0,1.6,-1.0]); const camObj=new THREE.Group(); camObj.position.set(0,1.37,0); cam.add(camObj);
+  camObj.add(cylX(.045,3.2,mat(C.steel,{metalness:.8})));
+  for (let i=0;i<6;i++) for (const s of [1,-1]){ const l=at(box(.05,.15,.1,mat(C.st,{metalness:.7})),X(i)+s*.1,0,0); l.geometry.translate(0,.035,0); l.rotation.x=s*.9+i; camObj.add(l); }
+  const inj=P(d,"injetores",[0,1.8,.75]); for (let i=0;i<6;i++){ inj.add(at(cyl(.03,.022,.3,mat(C.green,{metalness:.6})),X(i),1.12,0)); inj.add(at(box(.08,.06,.08,mat(C.dk)),X(i),1.27,0)); }
+  const tampa=P(d,"tampa",[0,2.6,0]); tampa.add(at(box(3.2,.12,.62,mat(C.yel)),0,1.5,0));
+  const pis=P(d,"pistoes",[0,0,0]), bie=P(d,"bielas",[0,0,0]), vir=P(d,"virabrequim",[0,0,0]);
+  const pistons=[], rods=[], flashes=[];
+  for (let i=0;i<6;i++){ const p=new THREE.Group(); p.add(cyl(.165,.165,.24,mat(0xc9ced1,{metalness:.7,roughness:.35})));
+    for (const y of [.07,.1]) { const r=mesh(new THREE.TorusGeometry(.166,.008,6,32),mat(C.dk)); r.rotation.x=Math.PI/2; r.position.y=y; p.add(r); }
+    p.position.x=X(i); pis.add(p); pistons.push(p);
+    const r=box(.07,1,.05,mat(C.st,{metalness:.7})); r.geometry=new THREE.BoxGeometry(.07,1,.05); bie.add(r); rods.push(r);
+    const f=mesh(new THREE.SphereGeometry(.15,20,10),new THREE.MeshBasicMaterial({color:C.oilHot,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    f.scale.set(1,.35,1); f.position.set(X(i),.94,0); f.raycast=()=>{}; d.group.add(f); flashes.push(f); }
+  const crank=new THREE.Group(); vir.add(crank);
+  for (let j=0;j<7;j++) crank.add(at(cylX(.075,.12,mat(C.steel,{metalness:.85,roughness:.25})),-1.5+j*.5,0,0));
+  for (let i=0;i<6;i++){ const g=new THREE.Group(); g.position.x=X(i); g.rotation.x=-(OFF[i]%TAU);
+    g.add(at(cylX(.065,.15,mat(C.steel,{metalness:.85,roughness:.25})),0,Rk,0));
+    for (const s of [-1,1]){ g.add(at(box(.05,.34,.2,mat(C.st,{metalness:.7})),s*.1,Rk/2-.02,0)); g.add(at(box(.05,.14,.3,mat(C.st,{metalness:.7})),s*.1,-.12,0)); }
+    crank.add(g); }
+  const vol=P(d,"volante",[-1.2,0,0]); const volObj=new THREE.Group(); volObj.position.x=-1.85; vol.add(volObj);
+  volObj.add(cylX(.48,.1,mat(C.st,{metalness:.7}))); volObj.add(gear(.48,.53,64,.06,mat(C.steel,{metalness:.8}),"x"));
+  const amo=P(d,"amortecedor",[1.0,0,0]); const amoObj=new THREE.Group(); amoObj.position.x=1.85; amo.add(amoObj);
+  amoObj.add(cylX(.26,.12,mat(C.dk))); amoObj.add(at(cylX(.18,.1,mat(C.st)),.1,0,0));
+  for (let k=0;k<6;k++) amoObj.add(at(box(.13,.04,.04,mat(C.yel)),0,Math.cos(k)*.2,Math.sin(k)*.2));
+  const tur=P(d,"turbo",[.9,.5,-1.2]); const turObj=new THREE.Group(); turObj.position.set(1.15,1.05,-.85); tur.add(turObj);
+  for (const [x,col] of [[-.2,0x8a5a3a],[.2,C.st]]){ const t=mesh(new THREE.TorusGeometry(.17,.08,12,28),mat(col,{metalness:.6})); t.rotation.y=Math.PI/2; t.position.x=x; turObj.add(t); }
+  turObj.add(cylX(.035,.5,mat(C.steel,{metalness:.9})));
+  const wheel=new THREE.Group(); wheel.position.x=.2; turObj.add(wheel);
+  for (let k=0;k<8;k++){ const b=box(.06,.15,.015,mat(C.steel,{metalness:.9})); b.position.set(0,Math.cos(k/8*TAU)*.08,Math.sin(k/8*TAU)*.08); b.rotation.x=-k/8*TAU; b.rotation.y=.4; wheel.add(b); }
+  const adm=P(d,"coletor_adm",[0,.4,1.1]); adm.add(at(box(2.9,.2,.16,mat(C.st,{metalness:.5})),0,1.05,.48));
+  for (let i=0;i<6;i++) adm.add(at(box(.14,.12,.12,mat(C.st,{metalness:.5})),X(i),1.02,.4));
+  const esc=P(d,"coletor_esc",[0,.25,-1.0]); esc.add(at(cylX(.08,2.8,mat(0x7a5440,{metalness:.5})),-.05,.98,-.5));
+  for (let i=0;i<6;i++) esc.add(at(box(.12,.1,.14,mat(0x7a5440,{metalness:.5})),X(i),1.0,-.42));
+  const car=P(d,"carter",[0,-1.0,0]); car.add(at(box(3.0,.36,.66,mat(C.dk)),0,-.5,0));
+  const fil=P(d,"filtro_oleo",[0,-.4,.9]); fil.add(at(cyl(.11,.11,.32,mat(C.yel)),.6,-.05,.55));
+  const bag=P(d,"bomba_agua",[.9,.2,.4]); const bagObj=new THREE.Group(); bagObj.position.set(1.85,.55,.28); bag.add(bagObj);
+  bagObj.add(cylX(.14,.16,mat(C.st))); const imp=gear(.07,.11,8,.04,mat(C.cop),"x"); imp.position.x=.1; bagObj.add(imp);
+  const NAMES={pow:"Combustão",exh:"Escape",int:"Admissão",cmp:"Compressão"};
+  let th=0;
+  d.update=(dt,k)=>{ th+=dt*1.6;
+    crank.rotation.x=th; volObj.rotation.x=th; amoObj.rotation.x=th; camObj.rotation.x=th/2; wheel.rotation.x+=dt*25; imp.rotation.x=th*1.3;
+    let html='<div class="box">Motor em câmera lenta · ordem de ignição <span class="k">1-5-3-6-2-4</span><div class="strokes">';
+    for (let i=0;i<6;i++){ const a=th-OFF[i]; const pinY=Rk*Math.cos(a), pinZ=Rk*Math.sin(a);
+      const py=pinY+Math.sqrt(Lr*Lr-pinZ*pinZ);
+      pistons[i].position.y=py+.06; between(rods[i],V3(X(i),pinY,pinZ),V3(X(i),py,0)); rods[i].scale.x=1; rods[i].scale.z=1;
+      const deg=((a*180/Math.PI)%720+720)%720;
+      const st= deg<180?"pow": deg<360?"exh": deg<540?"int":"cmp";
+      const lift=(lo)=>{ const u=(deg-lo)/180; return (u>=0&&u<=1)? .055*Math.sin(u*Math.PI):0; };
+      valves[i].ex.position.y=1.0-lift(180); valves[i].in.position.y=1.0-lift(360);
+      flashes[i].material.opacity = (k<.5 && deg<60) ? (1-deg/60)*.9 : 0;
+      html+=`<div class="s-${st}">C${i+1}<br>${NAMES[st]}</div>`; }
+    html+='</div></div>';
+    setLive(html); };
+  return d; },
+
+ transmissao(){ const d=newDet(); d.cam={t:[.2,0,0],r:8.4}; d.floorY=-1.5;
+  const car=P(d,"carcaca_t",[0,0,-2.3]); car.add(at(cylX(.86,4.7,glass(0xa9b4bb,.13),40,true),.1,0,0));
+  const mkConv=(col,fins)=>{ const g=new THREE.Group(); g.add(cylX(.72,.12,mat(col,{metalness:.6})));
+    for (let k=0;k<fins;k++){ const f=box(.14,.42,.025,mat(col,{metalness:.5})); f.position.set(0,Math.cos(k/fins*TAU)*.45,Math.sin(k/fins*TAU)*.45); f.rotation.x=-k/fins*TAU; f.rotation.y=.35; g.add(f); } return g; };
+  const imp=P(d,"impulsor",[-1.6,0,0]); const impO=mkConv(0xc0882e,18); impO.position.x=-2.3; imp.add(impO); impO.children[0].position.x=-.08;
+  const tur=P(d,"turbina",[-.7,0,0]); const turO=mkConv(0x8fa0aa,16); turO.position.x=-1.72; tur.add(turO); turO.children[0].position.x=.08;
+  const est=P(d,"estator",[-1.15,1.05,0]); const estO=gear(.24,.36,11,.1,mat(C.cop,{metalness:.6}),"x",.08); estO.position.x=-2.0; est.add(estO);
+  const eix=P(d,"eixo",[0,0,0]); const eixO=cylX(.065,4.3,mat(C.steel,{metalness:.85,roughness:.25})); eixO.position.x=-.1; eix.add(eixO);
+  const solP=P(d,"solar",[0,0,0]); const sol=gear(.165,.215,15,.22,mat(0xd8b45a,{metalness:.7}),"x",.07); sol.position.x=-.6; solP.add(sol);
+  const satP=P(d,"satelites",[0,0,1.35]); const carrier=new THREE.Group(); carrier.position.x=-.6; satP.add(carrier);
+  carrier.add(at(cylX(.46,.04,mat(C.st,{metalness:.6})),.15,0,0));
+  const planets=[]; for (let k=0;k<3;k++){ const g=gear(.145,.195,12,.2,mat(0x9ec4d6,{metalness:.6}),"x"); const a=k/3*TAU; g.position.set(0,Math.cos(a)*.36,Math.sin(a)*.36); carrier.add(g); planets.push(g);
+    carrier.add(at(cylX(.03,.34,mat(C.steel,{metalness:.9})),.08,Math.cos(a)*.36,Math.sin(a)*.36)); }
+  const anP=P(d,"anel",[0,1.55,0]); const anel=ring(.64,.555,.505,39,.2,mat(0xc96f42,{metalness:.6}),"x"); anel.position.x=-.6; anP.add(anel);
+  const p2=P(d,"planetario2",[0,-1.6,0]); const set2=new THREE.Group(); set2.position.x=.35; p2.add(set2);
+  set2.add(gear(.165,.215,15,.2,mat(0xd8b45a,{metalness:.7}),"x",.07)); set2.add(ring(.64,.555,.505,39,.18,mat(0xc96f42,{metalness:.6}),"x"));
+  const c2=new THREE.Group(); set2.add(c2); const pl2=[]; for (let k=0;k<3;k++){ const g=gear(.145,.195,12,.18,mat(0x9ec4d6,{metalness:.6}),"x"); const a=k/3*TAU; g.position.set(0,Math.cos(a)*.36,Math.sin(a)*.36); c2.add(g); pl2.push(g); }
+  const emb=P(d,"embreagem",[0,0,0]); const discs=[];
+  emb.add(at(cylX(.62,.08,mat(C.st,{metalness:.5})),1.0,0,0));
+  for (let j=0;j<10;j++){ const fr=j%2===0; const g=cylX(fr?.55:.6,.03,mat(fr?C.fric:0xc7ced2,{metalness:fr?.1:.8,roughness:fr?.9:.3}),36); g.position.x=1.1+j*.055; g.userData.bx=g.position.x; g.userData.j=j; emb.add(g); discs.push(g); }
+  const trP=P(d,"transferencia",[.7,.9,0]); const tr=gear(.33,.37,26,.16,mat(0xd8b45a,{metalness:.7}),"x",.07); tr.position.x=2.05; trP.add(tr);
+  const saP=P(d,"saida",[.4,-.95,0]); const sa=new THREE.Group(); sa.position.set(2.05,-.7,0); saP.add(sa);
+  sa.add(gear(.31,.35,25,.16,mat(0x9ec4d6,{metalness:.7}),"x"));
+  sa.add(cylX(.06,2.6,mat(C.steel,{metalness:.85})));
+  for (const x of [-1.3,1.3]) sa.add(at(box(.08,.28,.28,mat(C.dk)),x,0,0));
+  let a=0; const Zs=15,Zr=39,Zp=12;
+  d.update=(dt,k)=>{ a+=dt*2.2; const turb=a*.78;
+    impO.rotation.x=a; turO.rotation.x=turb; eixO.rotation.x=turb; sol.rotation.x=turb;
+    const carA=turb*Zs/(Zs+Zr); carrier.rotation.x=carA; const pr=-(turb-carA)*Zs/Zp; planets.forEach(p=>p.rotation.x=pr);
+    set2.rotation.x=carA*.6; pl2.forEach(p=>p.rotation.x=pr*.4);
+    tr.rotation.x=carA; sa.rotation.x=-carA*26/25;
+    discs.forEach(g=>{ g.position.x=g.userData.bx+g.userData.j*.13*k; if(g.userData.j%2===0) g.rotation.x=turb; }); };
+  d.live=()=>'<div class="box">Coroa travada pela embreagem · entrada na solar · saída no porta-satélites<br>Relação <span class="k">1 + 39/15 = 3,6 : 1</span> · turbina a ~78% da rotação do impulsor</div>';
+  return d; },
+
+ eixos(){ const d=newDet(); d.cam={t:[.2,0,0],r:9.2}; d.floorY=-1.3;
+  const car=P(d,"carcaca_e",[0,1.7,0]); car.add(mesh(new THREE.SphereGeometry(.56,28,18),glass(0xa9b4bb,.14))); car.add(cylZ(.22,3.4,glass(0xa9b4bb,.14),28,true));
+  const piP=P(d,"pinhao",[1.1,0,0]); const piO=new THREE.Group(); piO.position.set(.32,0,0); piP.add(piO);
+  piO.add(gear(.09,.14,9,.14,mat(0xd8b45a,{metalness:.7}),"x")); piO.add(at(cylX(.05,.8,mat(C.steel,{metalness:.85})),.45,0,0)); piO.add(at(cylX(.15,.06,mat(C.dk)),.85,0,0));
+  const difP=P(d,"diferencial",[0,0,0]); const dif=new THREE.Group(); difP.add(dif);
+  const coroa=gear(.4,.45,34,.08,mat(0xd8b45a,{metalness:.7}),"z",.2); coroa.position.z=.18; dif.add(coroa);
+  dif.add(at(cylZ(.25,.34,mat(C.st,{metalness:.5})),0,0,-.02));
+  for (let k=0;k<2;k++){ const s=cyl(.05,.09,.1,mat(0x9ec4d6,{metalness:.6})); s.position.y=k?.12:-.12; if(!k) s.rotation.x=Math.PI; dif.add(s); }
+  const halves=[], suns=[], carriers=[], plS=[], hubs=[], rotDiscs=[];
+  for (const s of [-1,1]){
+    const se=P(d,"semieixo",[0,0,s*.35]); const so=cylZ(.055,1.35,mat(C.steel,{metalness:.85})); so.position.z=s*.88; se.add(so); halves.push(so);
+    const fr=P(d,"freio",[0,0,s*.9]); for (let j=0;j<8;j++){ const r=j%2===0; const g=cylZ(r?.3:.34,.025,mat(r?C.fric:0xc7ced2,{metalness:r?.1:.8,roughness:r?.9:.3}),32); g.position.z=s*(1.05+j*.045); fr.add(g); if(r) rotDiscs.push(g); }
+    const cf=P(d,"comando_final",[0,0,s*1.6]); const cfo=new THREE.Group(); cfo.position.z=s*1.55; cf.add(cfo);
+    const sg=gear(.1,.13,11,.14,mat(0xd8b45a,{metalness:.7})); cfo.add(sg); suns.push(sg);
+    cfo.add(ring(.37,.315,.285,29,.14,mat(0xc96f42,{metalness:.6})));
+    const cr=new THREE.Group(); cfo.add(cr); carriers.push(cr); cr.add(at(cylZ(.27,.03,mat(C.st)),0,0,s*.09));
+    for (let k=0;k<3;k++){ const g=gear(.075,.11,9,.12,mat(0x9ec4d6,{metalness:.6})); const a=k/3*TAU; g.position.set(Math.cos(a)*.205,Math.sin(a)*.205,0); cr.add(g); plS.push(g); }
+    const cu=P(d,"cubo",[0,0,s*2.3]); const cuo=new THREE.Group(); cuo.position.z=s*1.78; cu.add(cuo); hubs.push(cuo);
+    cuo.add(cylZ(.55,.1,mat(C.rim,{metalness:.5}),36)); for (let k=0;k<10;k++) cuo.add(at(cylZ(.025,.16,mat(C.steel,{metalness:.9})),Math.cos(k/10*TAU)*.44,Math.sin(k/10*TAU)*.44,s*.05));
+  }
+  let a=0;
+  d.update=(dt)=>{ a+=dt*4; piO.rotation.x=a; const ca=a*9/34; dif.rotation.z=ca; halves.forEach(h=>h.rotation.z=ca); suns.forEach(g=>g.rotation.z=ca);
+    rotDiscs.forEach(g=>g.rotation.z=ca); const cc=ca*11/40; carriers.forEach(c=>c.rotation.z=cc); plS.forEach(p=>p.rotation.z=-(ca-cc)*11/9); hubs.forEach(h=>h.rotation.z=cc); };
+  d.live=()=>'<div class="box">Pinhão <span class="k">9</span> → coroa <span class="k">34</span> · comando final: solar <span class="k">11</span>, anel fixo <span class="k">29</span><br>Redução total ≈ <span class="k">13,7 : 1</span> · o cubo gira muito mais devagar que o pinhão</div>';
+  return d; },
+
+ implemento(){ const d=newDet(); d.cam={t:[.3,0,0],r:6.2}; d.floorY=-1.0; d.ex0=0;
+  const cam=P(d,"camisa",[0,0,-1.0]); cam.add(at(cylX(.3,2.2,glass(0xb6c0c6,.2),40,true),-.2,0,0));
+  cam.add(at(cylX(.3,.12,mat(C.dk)),-1.36,0,0)); const eye=mesh(new THREE.TorusGeometry(.12,.05,10,24),mat(C.dk)); eye.position.x=-1.58; cam.add(eye);
+  for (const x of [-1.1,.7]) cam.add(at(cyl(.06,.06,.2,mat(C.yel)),x,.36,0));
+  const cab=P(d,"cabecote_c",[.9,.55,0]); cab.add(at(cylX(.3,.18,mat(C.dk),36),.95,0,0));
+  const ved=P(d,"vedacoes",[1.0,1.15,0]); for (const x of [.9,1.0,1.06]){ const t=mesh(new THREE.TorusGeometry(.12,.022,8,28),mat(x>1.03?C.yel:0x2d2d2d,{metalness:0,roughness:.8})); t.rotation.y=Math.PI/2; t.position.x=x; ved.add(t); }
+  const emb=P(d,"embolo",[0,0,0]); const pis=new THREE.Group(); emb.add(pis); pis.add(cylX(.285,.16,mat(0xc9ced1,{metalness:.7}),36));
+  for (const x of [-.05,.05]){ const t=mesh(new THREE.TorusGeometry(.285,.015,8,36),mat(0x2d2d2d,{metalness:0})); t.rotation.y=Math.PI/2; t.position.x=x; pis.add(t); }
+  const has=P(d,"haste",[0,0,0]); const rod=new THREE.Group(); has.add(rod); rod.add(at(cylX(.11,1.9,mat(C.steel,{metalness:.95,roughness:.12})),.95,0,0));
+  const reye=mesh(new THREE.TorusGeometry(.1,.045,10,24),mat(C.dk)); reye.position.x=1.98; rod.add(reye);
+  const oleo=P(d,"oleo",[0,0,0]);
+  const mkOil=(r,c)=>{ const g=new THREE.CylinderGeometry(r,r,1,32); g.rotateZ(Math.PI/2); const m=mesh(g,new THREE.MeshStandardMaterial({color:c,transparent:true,opacity:.5,depthWrite:false,roughness:.4})); return m; };
+  const capO=mkOil(.27,C.oilHot), rodO=mkOil(.27,C.oilCold); oleo.add(capO); oleo.add(rodO);
+  let t=0, dir=1;
+  d.update=(dt,k)=>{ t+=dt*.9; const s=.7-.7*Math.cos(t); dir=Math.sin(t)>=0?1:-1; const px=-1.15+s;
+    pis.position.x=px; rod.position.x=px;
+    const capL=Math.max(.01,px-.08-(-1.29)); capO.scale.x=capL; capO.position.x=-1.29+capL/2;
+    const rodL=Math.max(.01,.86-(px+.08)); rodO.scale.x=rodL; rodO.position.x=px+.08+rodL/2;
+    capO.material.color.setHex(dir>0?C.oilHot:C.oilCold); rodO.material.color.setHex(dir>0?C.oilCold:C.oilHot);
+    capO.visible=rodO.visible=k<.35; d._dir=dir; };
+  d.live=()=> d._dir>0
+    ? '<div class="box"><span class="k">Estendendo</span> · pressão no lado base (área cheia do êmbolo) · lado haste devolve óleo ao tanque<br>Mais força, menos velocidade</div>'
+    : '<div class="box"><span class="k">Recolhendo</span> · pressão no lado haste (área anular) · lado base devolve óleo ao tanque<br>Menos força, mais velocidade</div>';
+  return d; },
+
+ hidraulico(){ const d=newDet(); d.cam={t:[0,0,0],r:4.6}; d.floorY=-1.1; d.ex0=0;
+  const car=P(d,"carcaca_b",[0,1.3,0]); car.add(box(1.5,1.0,.42,glass(0xb6c0c6,.18)));
+  const N=12, r0=.25, r1=.33, cx=.29;
+  const m1=P(d,"eng_motora",[-.5,0,1.0]); const g1=new THREE.Group(); g1.position.x=-cx; m1.add(g1); g1.add(gear(r0,r1,N,.3,mat(0xd8b45a,{metalness:.7}),"z",.06)); g1.add(cylZ(.06,1.4,mat(C.steel,{metalness:.9})));
+  const m2=P(d,"eng_movida",[.5,0,1.0]); const g2=new THREE.Group(); g2.position.x=cx; m2.add(g2); g2.add(gear(r0,r1,N,.3,mat(0x9ec4d6,{metalness:.7}),"z",.06)); g2.add(cylZ(.06,.5,mat(C.steel,{metalness:.9})));
+  const pl=P(d,"placas",[0,0,1.8]); pl.add(at(box(1.3,.85,.04,mat(C.cop,{metalness:.6})),0,0,.2));
+  const pl2=P(d,"placas",[0,0,-1.5]); pl2.add(at(box(1.3,.85,.04,mat(C.cop,{metalness:.6})),0,0,-.2));
+  const po=P(d,"portas",[0,0,0]); po.add(at(cyl(.16,.16,.35,mat(C.oilCold,{metalness:.3})),0,-.66,0)); po.add(at(cyl(.1,.1,.35,mat(C.oilHot,{metalness:.3})),0,.66,0));
+  const parts=[]; const pg=new THREE.SphereGeometry(.028,8,6);
+  for (let i=0;i<24;i++){ const m=mesh(pg,new THREE.MeshBasicMaterial({color:C.oilCold})); m.raycast=()=>{}; d.group.add(m); parts.push({m,side:i%2?1:-1,u:(i>>1)/12}); }
+  let a=0;
+  d.update=(dt,k)=>{ a+=dt*1.6; g1.rotation.z=-a; g2.rotation.z=a+Math.PI/N;
+    for (const p of parts){ p.u=(p.u+dt*.12)%1; const ang= p.side<0 ? -Math.PI/2 - p.u*Math.PI : -Math.PI/2 + p.u*Math.PI;
+      const c=p.side*cx; p.m.position.set(c+Math.cos(ang)*.37, Math.sin(ang)*.37, 0); p.m.material.color.setHex(p.u>.5?C.oilHot:C.oilCold); p.m.visible=k<.35; } };
+  d.live=()=>'<div class="box">Óleo entra pela <span style="color:var(--cool)">sucção</span> (baixo), viaja preso nos vãos dos dentes junto à carcaça e sai pela <span style="color:var(--hot)">pressão</span> (alto)<br>Deslocamento positivo: volume fixo por volta</div>';
+  return d; },
+
+ chassi(){ const d=newDet(); d.cam={t:[0,0,0],r:6.8}; d.floorY=-1.0;
+  const tr=P(d,"quadro_tras",[-1.0,0,0]); tr.add(at(box(1.8,.6,1.6,mat(C.yel)),-1.15,0,0));
+  for (const y of [-.35,.35]) tr.add(at(box(.7,.1,.7,mat(C.yel)),-.1,y,0));
+  const frG=P(d,"quadro_diant",[1.0,0,0]); const fr=new THREE.Group(); frG.add(fr);
+  fr.add(at(box(1.8,.6,1.6,mat(C.yel)),1.15,0,0)); fr.add(at(box(.6,.5,.5,mat(C.yel)),.1,0,0));
+  for (const s of [-1,1]){ const pg=P(d,"pino",[0,s*1.1,0]); pg.add(at(cyl(.07,.07,.45,mat(C.steel,{metalness:.9})),0,s*.3,0)); pg.add(at(cyl(.12,.12,.04,mat(C.dk)),0,s*.53,0));
+    const rg=P(d,"rolamento",[0,s*.7,.6]); const t=mesh(new THREE.TorusGeometry(.12,.04,10,24),mat(C.cop,{metalness:.7})); t.rotation.x=Math.PI/2; t.position.y=s*.24; rg.add(t); }
+  const cyls=[]; for (const s of [-1,1]){ const g=P(d,"cil_direcao",[0,0,s*.7]); const c=makeCyl(.08,.045,C.dk,C.steel); c.Lb=.9; c.Lr=.9; c.s=s; g.add(c.b); g.add(c.r); cyls.push(c); }
+  let t=0;
+  d.update=(dt)=>{ t+=dt*.8; const st=.7*Math.sin(t); fr.rotation.y=st;
+    for (const c of cyls){ const B=V3(.75,.1,c.s*.92).applyAxisAngle(UP,st); setCyl(c,V3(-.85,.1,c.s*.92),B); }
+    d._st=Math.round(st*180/Math.PI); };
+  d.live=()=>`<div class="box">Ângulo de articulação <span class="k">${d._st>0?"+":""}${d._st}°</span> · um cilindro estende enquanto o outro recolhe</div>`;
+  return d; },
+
+ cacamba(){ const d=newDet(); d.cam={t:[.9,0,0],r:6.4}; d.floorY=-1.0;
+  const bp=bucketPieces(); const map={concha:[bp.concha,[0,0,0]],lamina:[bp.lamina,[.55,0,0]],dentes:[bp.dentes,[1.05,0,0]],chapas:[bp.chapas,[0,-.6,0]],olhais:[bp.olhais,[-.7,0,0]]};
+  for (const [id,[arr,ex]] of Object.entries(map)){ const g=P(d,id,ex); arr.forEach(o=>g.add(o)); }
+  const l=P(d,"cantoneiras",[0,0,.6]); bp.cantL.forEach(o=>l.add(o)); const r=P(d,"cantoneiras",[0,0,-.6]); bp.cantR.forEach(o=>r.add(o));
+  d.update=(dt)=>{ d.group.rotation.y+=dt*.25; };
+  d.live=()=>'<div class="box">Carga útil ≈ <span class="k">15 t</span> · volume ≈ carga ÷ densidade do material solto</div>';
+  return d; }
+};
+
+/* =========================================================
+   CONTROLE DE CÂMERA (órbita própria)
+   ========================================================= */
+const orbit={t:V3(-.5,1,0), r:13.5, th:.75, ph:1.12, gt:V3(-.5,1,0), gr:13.5, gth:.75, gph:1.12};
+function camTo(t,r,th,ph){ orbit.gt.set(...t); orbit.gr=r; if(th!==undefined) orbit.gth=th; if(ph!==undefined) orbit.gph=ph; }
+const ptrs=new Map(); let dragMoved=0, downT=0, pinch0=0;
+const cv = renderer ? renderer.domElement : null;
+if (cv){
+  cv.addEventListener("pointerdown",e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); dragMoved=0; downT=performance.now();
+    if (ptrs.size===2){ const [a,b]=[...ptrs.values()]; pinch0=Math.hypot(a.x-b.x,a.y-b.y); } });
+  cv.addEventListener("pointermove",e=>{ const p=ptrs.get(e.pointerId);
+    if (!p){ hover(e); return; }
+    const dx=e.clientX-p.x, dy=e.clientY-p.y; dragMoved+=Math.abs(dx)+Math.abs(dy); p.x=e.clientX; p.y=e.clientY;
+    if (ptrs.size===1){ orbit.gth-=dx*.008; orbit.gph=Math.min(1.52,Math.max(.12,orbit.gph-dy*.008)); tip.hidden=true; }
+    else if (ptrs.size===2){ const [a,b]=[...ptrs.values()]; const dd=Math.hypot(a.x-b.x,a.y-b.y); if(pinch0){ orbit.gr=Math.min(30,Math.max(2,orbit.gr*pinch0/dd)); } pinch0=dd; } });
+  const up=e=>{ const was=ptrs.has(e.pointerId); ptrs.delete(e.pointerId); if (ptrs.size<2) pinch0=0;
+    if (was && dragMoved<7 && performance.now()-downT<600) click(e); };
+  cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",e=>{ptrs.delete(e.pointerId);});
+  cv.addEventListener("pointerleave",()=>{ if(!ptrs.size){ tip.hidden=true; setHover(null); } });
+  cv.addEventListener("wheel",e=>{ e.preventDefault(); orbit.gr=Math.min(30,Math.max(2,orbit.gr*(1+Math.sign(e.deltaY)*.08))); },{passive:false});
+}
+
+/* =========================================================
+   ESTADO, SELEÇÃO E DESTAQUE
+   ========================================================= */
+const S={mode:"main", sys:null, part:null, tab:"how", explode:0, gExplode:0, playing:true, cycle:false, xray:false, ct:0, det:null, hover:null, quiz:{}};
+const cache={};
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+function pick(e){ if(!cv) return null; const r=cv.getBoundingClientRect(); ndc.set((e.clientX-r.left)/r.width*2-1, -(e.clientY-r.top)/r.height*2+1); ray.setFromCamera(ndc,camera);
+  const root = S.mode==="main" ? loader.root : S.det.group;
+  const hits = ray.intersectObject(root,true).filter(h=>h.object.visible && h.object.material && !(S.mode==="main" && S.xray && h.object.userData.shell));
+  let best = hits.find(h=>!h.object.userData.glass) || hits[0]; if(!best) return null;
+  if (S.mode==="main") return best.object.userData.sys ? {sys:best.object.userData.sys} : null;
+  let o=best.object; while(o && !o.userData.part) o=o.parent; return o ? {part:o.userData.part} : null; }
+function meshesOf(h){ if(!h) return [];
+  if (h.sys) return sysMeshes[h.sys];
+  const out=[]; S.det.parts.filter(p=>p.userData.part===h.part).forEach(p=>p.traverse(m=>{ if(m.isMesh) out.push(m); })); return out; }
+let lit=[];
+function relight(){ lit.forEach(m=>m.material.emissive && m.material.emissive.setHex(m.userData.e0||0)); lit=[];
+  const apply=(arr,hex)=>arr.forEach(m=>{ if(!m.material.emissive) return; if(m.userData.e0===undefined) m.userData.e0=m.material.emissive.getHex(); m.material.emissive.setHex(hex); lit.push(m); });
+  if (S.mode==="detail" && S.part) apply(meshesOf({part:S.part}),0x5c4200);
+  if (S.mode==="main" && S.sys) apply(meshesOf({sys:S.sys}),0x4a3500);
+  if (S.hover) apply(meshesOf(S.hover),0x2e2510); }
+function setHover(h){ const k=h?(h.sys||h.part):null, k0=S.hover?(S.hover.sys||S.hover.part):null; if(k===k0) return; S.hover=h; relight(); if(cv) cv.classList.toggle("pointing",!!h); }
+function hover(e){ const h=pick(e); setHover(h);
+  if (h){ const r=viewer.getBoundingClientRect(); tip.hidden=false; tip.style.left=(e.clientX-r.left)+"px"; tip.style.top=(e.clientY-r.top)+"px";
+    tip.textContent = h.sys ? SYS[h.sys].n : SYS[S.sys].parts[h.part][0]; } else tip.hidden=true; }
+function click(e){ const h=pick(e); if(!h) return;
+  if (h.sys) openSys(h.sys); else selectPart(h.part); }
+
+/* =========================================================
+   NAVEGAÇÃO
+   ========================================================= */
+function openSys(id){ S.sys=id; S.part=null; S.tab="how";
+  const s=SYS[id];
+  if (s.detail && DET[id]){ S.mode="detail";
+    if(!cache[id]){ cache[id]=DET[id](); scene.add(cache[id].group); }
+    Object.values(cache).forEach(d=>d.group.visible=false);
+    S.det=cache[id]; S.det.group.visible=true; loader.root.visible=false; floor.position.y=S.det.floorY;
+    S.explode=0; S.gExplode=S.det.ex0??.55; S.playing=true; camTo(S.det.cam.t,S.det.cam.r,.85,1.15);
+  } else { S.mode="main"; S.det=null; loader.root.visible=true; floor.position.y=0;
+    const b=new THREE.Box3(); sysMeshes[id].forEach(m=>b.expandByObject(m)); const c=b.getCenter(V3()); camTo([c.x,c.y,c.z],6.5); }
+  setHover(null); relight(); renderAll(); }
+function home(){ S.mode="main"; S.sys=null; S.part=null; S.det=null; Object.values(cache).forEach(d=>d.group.visible=false);
+  loader.root.visible=true; floor.position.y=0; camTo([-.5,1,0],13.5,.75,1.12); setLive(""); relight(); renderAll(); }
+function selectPart(p){ S.part = S.part===p ? null : p; relight(); renderPanel(); }
+
+/* =========================================================
+   INTERFACE
+   ========================================================= */
+function renderAll(){ renderHud(); renderPanel(); }
+function renderHud(){
+  if (S.mode==="main"){
+    crumb.innerHTML=`<span class="path"><b>R1700</b>${S.sys?" › "+SYS[S.sys].n:" · máquina completa"}</span>${S.sys?'<button class="btn" id="hHome">← Máquina</button>':""}`;
+    controls.innerHTML=`<button class="btn ${S.cycle?"on":""}" id="hCycle">${S.cycle?"❚❚ Ciclo de carga":"▶ Ciclo de carga"}</button>
+      <button class="btn ${S.xray?"on":""}" id="hXray">Raio-X</button><button class="btn" id="hReset">Vista inicial</button>
+      <span class="hint">Arraste para girar · role ou pince para zoom · clique num sistema</span>`;
+    if(!S.cycle) setLive("");
+  } else {
+    crumb.innerHTML=`<button class="btn" id="hHome">← Máquina</button><span class="path"><b>R1700</b> › ${SYS[S.sys].n}</span>`;
+    controls.innerHTML=`<label class="slider" for="hEx">Explodir <input type="range" id="hEx" min="0" max="1" step="0.01" value="${S.gExplode}"></label>
+      <button class="btn ${S.playing?"on":""}" id="hPlay">${S.playing?"❚❚ Pausar":"▶ Animar"}</button>
+      <span class="hint">Clique numa peça para estudar</span>`;
+  }
+  const q=id=>document.getElementById(id);
+  q("hHome")&&(q("hHome").onclick=home);
+  q("hCycle")&&(q("hCycle").onclick=()=>{ S.cycle=!S.cycle; renderHud(); });
+  q("hXray")&&(q("hXray").onclick=()=>{ S.xray=!S.xray; applyXray(); renderHud(); });
+  q("hReset")&&(q("hReset").onclick=()=>{ if(S.sys) home(); else camTo([-.5,1,0],13.5,.75,1.12); });
+  q("hEx")&&(q("hEx").oninput=e=>{ S.gExplode=+e.target.value; });
+  q("hPlay")&&(q("hPlay").onclick=()=>{ S.playing=!S.playing; renderHud(); });
+}
+function applyXray(){ loader.root.traverse(m=>{ if(m.isMesh && m.userData.shell){ m.material.opacity=S.xray?.16:1; m.material.depthWrite=!S.xray; m.material.needsUpdate=true; } }); }
+
+function renderPanel(){
+  if (!S.sys){
+    panel.innerHTML=`<div class="eyebrow">Carregadeira subterrânea · LHD</div>
+      <h1>Caterpillar R1700</h1>
+      <p class="lede">Carregadeira de mina subterrânea que carrega, transporta e descarrega minério (Load, Haul, Dump). Clique em qualquer sistema da máquina, ou escolha na lista, para abrir a vista explodida e ver como ele funciona.</p>
+      <dl class="specs">
+        <dt>Carga útil nominal</dt><dd>≈ 15.000 kg</dd>
+        <dt>Motor</dt><dd>Cat C13 · 6 cil. em linha · ≈ 12,5 L</dd>
+        <dt>Transmissão</dt><dd>Planetária powershift + conversor</dd>
+        <dt>Freios</dt><dd>SAFR multidisco em óleo, 4 rodas</dd>
+        <dt>Direção</dt><dd>Articulação central, 2 cilindros</dd>
+        <dt>Pneus</dt><dd>Radiais, banda L5S</dd>
+      </dl>
+      <p class="small muted">Valores de referência para estudo. Potência, caçamba e pneus variam com a versão e a certificação de emissões: confirme no OMM e na ficha técnica da sua frota.</p>
+      <h2>Sistemas</h2>
+      <div class="stack">${ORDER.map((k,i)=>`<button class="sysbtn" data-sys="${k}"><span class="n">${String(i+1).padStart(2,"0")}</span><span class="t">${SYS[k].n}</span><span class="d">${SYS[k].tag} · ${SYS[k].detail?"vista explodida animada":"destaque na máquina"}</span></button>`).join("")}</div>
+      <p class="note">Modelo 3D didático e simplificado, construído para estudo. As proporções e a disposição interna são aproximadas e não substituem o manual de serviço do fabricante.</p>`;
+    panel.querySelectorAll("[data-sys]").forEach(b=>b.onclick=()=>openSys(b.dataset.sys));
+    return;
+  }
+  const s=SYS[S.sys], idx=ORDER.indexOf(S.sys)+1;
+  const partIds=Object.keys(s.parts);
+  const tabs=[["how","Funcionamento"],["parts","Componentes"],["plan","Manutenção"],["fails","Falhas"],["quiz","Teste"]];
+  let partCard="";
+  if (S.part && s.parts[S.part]){ const [n,f,m]=s.parts[S.part];
+    partCard=`<div class="card" style="margin-top:12px"><div class="lab">Peça selecionada</div><h3>${n}</h3><p style="margin:0">${f}</p><div class="mnt"><b>Manutenção</b>${m}</div></div>`; }
+  let body="";
+  if (S.tab==="how"){
+    body = s.how.map(p=>`<p>${p}</p>`).join("")
+      + (s.flow?`<h2>Caminho</h2><div class="flow">${s.flow.map(x=>`<span>${x}</span>`).join("<i>→</i>")}</div>`:"")
+      + (s.formula?`<h2>Na ponta do lápis</h2><div class="formula">${s.formula}</div>`:"");
+  } else if (S.tab==="parts"){
+    body = partIds.length
+      ? `<p class="small muted">Clique numa peça aqui ou no modelo 3D.</p>`+partIds.map(p=>`<button class="partbtn ${S.part===p?"sel":""}" data-part="${p}"><span class="pn">${s.parts[p][0]}</span><span class="go">${S.part===p?"selecionada":"ver"}</span></button>`).join("")
+      : `<ul>${s.comps.map(c=>`<li>${c}</li>`).join("")}</ul>`;
+  } else if (S.tab==="plan"){
+    body = `<p class="small muted">${NOTE_PLAN}</p><div class="tblwrap"><table><thead><tr><th>Item</th><th>Intervalo</th><th>Como</th></tr></thead><tbody>${s.plan.map(r=>`<tr><td>${r[0]}</td><td class="iv">${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</tbody></table></div>
+      <div class="card pcm"><div class="lab">Ligação com o PCM</div><p style="margin:0">${s.pcm}</p></div>`;
+  } else if (S.tab==="fails"){
+    body = s.fails.map(f=>`<div class="fail"><h3>${f[0]}</h3><div class="row"><b>Sintoma</b>${f[1]}</div><div class="row"><b>Causas</b>${f[2]}</div><div class="row"><b>Ação</b>${f[3]}</div></div>`).join("");
+  } else {
+    const [q,opts,ans,why]=s.quiz; const chosen=S.quiz[S.sys];
+    body = `<p><b>${q}</b></p>${opts.map((o,i)=>`<button class="opt ${chosen!==undefined?(i===ans?"right":(i===chosen?"wrong":"")):""}" data-opt="${i}">${o}</button>`).join("")}
+      ${chosen!==undefined?`<p class="small" style="margin-top:8px">${chosen===ans?"Correto. ":"Ainda não. "}${why}</p>`:""}`;
+  }
+  panel.innerHTML=`<button class="btn back" id="pBack">← Visão geral</button>
+    <div class="eyebrow">${s.tag} · sistema ${idx} de ${ORDER.length}</div>
+    <h1>${s.n}</h1><p class="lede">${s.sum}</p>
+    ${s.detail?`<p class="small muted">${s.detail}. Use o controle Explodir e clique nas peças.</p>`:`<p class="small muted">Sistema destacado na máquina completa.</p>`}
+    ${partCard}
+    <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${S.tab===k}" data-tab="${k}">${l}</button>`).join("")}</div>
+    <div>${body}</div>`;
+  panel.querySelector("#pBack").onclick=home;
+  panel.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; renderPanel(); });
+  panel.querySelectorAll("[data-part]").forEach(b=>b.onclick=()=>selectPart(b.dataset.part));
+  panel.querySelectorAll("[data-opt]").forEach(b=>b.onclick=()=>{ S.quiz[S.sys]=+b.dataset.opt; renderPanel(); });
+}
+
+/* =========================================================
+   LOOP
+   ========================================================= */
+buildLoader();
+function resize(){ if(!renderer) return; const w=viewer.clientWidth, h=viewer.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/Math.max(1,h); camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(viewer); resize();
+const clock=new THREE.Clock(); let lastCycleLabel="";
+function frame(){ requestAnimationFrame(frame); const dt=Math.min(clock.getDelta(),.05);
+  const f=1-Math.pow(.0015,dt);
+  orbit.t.lerp(orbit.gt,f); orbit.r+= (orbit.gr-orbit.r)*f; orbit.th+=(orbit.gth-orbit.th)*f; orbit.ph+=(orbit.gph-orbit.ph)*f;
+  camera.position.setFromSphericalCoords(orbit.r,orbit.ph,orbit.th).add(orbit.t); camera.lookAt(orbit.t);
+  if (S.mode==="main"){
+    if (S.cycle){ S.ct+=dt; const p=cyclePose(S.ct); setPose(p.arm,p.bw,p.steer);
+      if (p.moving) loader.wheels.forEach(w=>w.rotation.z-=dt*1.6*p.dir);
+      const lab=p.label||lastCycleLabel; setLive(`<div class="box">Ciclo LHD · <span class="k">${lab}</span></div>`); if(p.label) lastCycleLabel=p.label; }
+  } else if (S.det){
+    S.explode += (S.gExplode-S.explode)*f;
+    S.det.parts.forEach(p=>p.position.copy(p.userData.base).addScaledVector(p.userData.ex,S.explode).add(p.userData.anim));
+    if (S.playing) S.det.update(dt,S.explode);
+    const h=S.det.live(); if (h) setLive(h);
+  }
+  if (renderer) renderer.render(scene,camera);
+}
+renderAll(); frame();
+</script>
