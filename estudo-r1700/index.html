@@ -303,7 +303,7 @@ const SYS = {
 
  cacamba:{
   n:"Caçamba e GET", tag:"Implemento", detail:"Vista explodida da caçamba com lâmina, dentes e chapas de desgaste",
-  sum:"A caçamba recolhe, transporta e descarrega o minério. A carga útil nominal fica na faixa de 15 toneladas, e o volume da caçamba é escolhido conforme a densidade do material.",
+  sum:"A caçamba recolhe, transporta e descarrega o minério. A carga útil nominal é de 15 toneladas, e o volume da caçamba (de cerca de 5,7 a 8,6 m³ na R1700) é escolhido conforme a densidade do material.",
   how:[
    "LHD significa <b>Load, Haul, Dump</b>: carregar, transportar e descarregar. A caçamba penetra na pilha com a lâmina na horizontal, recolhe para trás para segurar a carga e viaja baixa para manter o centro de gravidade baixo.",
    "A <b>carga útil</b> é limitada em peso. Por isso o volume certo depende da densidade do material solto. Caçamba grande demais para um minério pesado sobrecarrega eixos, pneus e articulação.",
@@ -943,14 +943,17 @@ function renderPanel(){
       <h1>Caterpillar R1700</h1>
       <p class="lede">Carregadeira de mina subterrânea que carrega, transporta e descarrega minério (Load, Haul, Dump). Clique em qualquer sistema da máquina, ou escolha na lista, para abrir a vista explodida e ver como ele funciona.</p>
       <dl class="specs">
-        <dt>Carga útil nominal</dt><dd>≈ 15.000 kg</dd>
-        <dt>Motor</dt><dd>Cat C13 · 6 cil. em linha · ≈ 12,5 L</dd>
+        <dt>Carga útil nominal</dt><dd>15.000 kg · 3 passes num AD45</dd>
+        <dt>Peso bruto carregado</dt><dd>≈ 62.700 kg</dd>
+        <dt>Motor</dt><dd>Cat C13 · 6 cil. em linha · turbo + ATAAC</dd>
+        <dt>Potência</dt><dd>269 kW (Tier 3) · 257 kW (Stage V)</dd>
+        <dt>Caçamba</dt><dd>≈ 5,7 a 8,6 m³, conforme o tipo</dd>
         <dt>Transmissão</dt><dd>Planetária powershift + conversor</dd>
         <dt>Freios</dt><dd>SAFR multidisco em óleo, 4 rodas</dd>
         <dt>Direção</dt><dd>Articulação central, 2 cilindros</dd>
         <dt>Pneus</dt><dd>Radiais, banda L5S</dd>
       </dl>
-      <p class="small muted">Valores de referência para estudo. Potência, caçamba e pneus variam com a versão e a certificação de emissões: confirme no OMM e na ficha técnica da sua frota.</p>
+      <p class="small muted">Valores da ficha técnica pública da Cat (cat.com). Existe também a R1700 XE, a bateria, com 220 kW. Confirme no OMM e na ficha da sua frota, porque a configuração varia por máquina.</p>
       <h2>Sistemas</h2>
       <div class="stack">${ORDER.map((k,i)=>`<button class="sysbtn" data-sys="${k}"><span class="n">${String(i+1).padStart(2,"0")}</span><span class="t">${SYS[k].n}</span><span class="d">${SYS[k].tag} · ${SYS[k].detail?"vista explodida animada":"destaque na máquina"}</span></button>`).join("")}</div>
       <p class="note">Modelo 3D didático e simplificado, construído para estudo. As proporções e a disposição interna são aproximadas e não substituem o manual de serviço do fabricante.</p>`;
